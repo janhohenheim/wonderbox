@@ -3,22 +3,6 @@ use std::any::Any;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-fn main() {
-    let mut container = Container::new();
-
-    container.register(Rc::new(String::new()));
-    println!("Registered a string!");
-
-    let _string = container.resolve_shared::<String>();
-    println!("Resolved a string!");
-
-    container.register(Rc::new(FooImpl::new()) as Rc<dyn Foo>);
-    println!("Registered a Foo!");
-
-    let _foo = container.resolve_shared::<dyn Foo>();
-    println!("Resolved a dyn Foo!");
-}
-
 #[derive(Default)]
 struct Container {
     shared_items: HashMap<TypeId, Box<dyn Any>>,
@@ -51,14 +35,35 @@ impl Container {
     }
 }
 
-trait Foo {}
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-struct FooImpl {}
+    #[test]
+    fn resolves_string() {
+        let mut container = Container::new();
+        container.register(Rc::new(String::new()));
 
-impl FooImpl {
-    fn new() -> Self {
-        FooImpl {}
+        let _string = container.resolve_shared::<String>();
     }
-}
 
-impl Foo for FooImpl {}
+    #[test]
+    fn resolves_rc_of_trait_object() {
+        let mut container = Container::new();
+        container.register(Rc::new(FooImpl::new()) as Rc<dyn Foo>);
+
+        let _foo = container.resolve_shared::<dyn Foo>();
+    }
+
+    trait Foo {}
+
+    struct FooImpl {}
+
+    impl FooImpl {
+        fn new() -> Self {
+            FooImpl {}
+        }
+    }
+
+    impl Foo for FooImpl {}
+}
