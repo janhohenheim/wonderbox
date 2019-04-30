@@ -1,28 +1,24 @@
 #![feature(custom_attribute)]
 
 use core::any::TypeId;
-use maplit::hashmap;
 use std::any::Any;
 use std::collections::HashMap;
 use std::rc::Rc;
 
 fn main() {
-    let container = Container::new();
+    let mut container = Container::new();
 
-    let _string: Rc<String> = container.resolve_shared();
+    container.register(Rc::new(String::new()));
+    println!("Registered a string!");
 
+    let _string: Rc<String> = container.resolve_shared::<String>();
     println!("Resolved a string!");
 
-    let _foo: Rc<dyn Foo> = container.resolve_shared();
+    container.register(Rc::new(FooImpl::new()) as Rc<dyn Foo>);
+    println!("Registered a Foo!");
 
+    let _foo: Rc<dyn Foo> = container.resolve_shared::<dyn Foo>();
     println!("Resolved a dyn Foo!");
-}
-
-trait Resolvable<T>
-where
-    T: ?Sized,
-{
-    fn resolve_shared(&self) -> Rc<T>;
 }
 
 struct Container {
@@ -39,33 +35,26 @@ impl Container {
         );
         Self { shared_items }
     }
-}
 
-impl Resolvable<String> for Container {
-    fn resolve_shared(&self) -> Rc<String> {
-        let type_id = TypeId::of::<String>();
-        let resolvable_type = self
-            .shared_items
-            .get(&type_id)
-            .expect("No registered implementations of type String found");
-        resolvable_type
-            .downcast_ref::<Rc<String>>()
-            .unwrap()
-            .clone()
+    fn register<T>(&mut self, implementation: T) -> &mut Self
+    where
+        T: 'static,
+    {
+        self.shared_items
+            .insert(TypeId::of::<T>(), Box::new(implementation));
+        self
     }
-}
 
-impl Resolvable<Foo> for Container {
-    fn resolve_shared(&self) -> Rc<dyn Foo> {
-        let type_id = TypeId::of::<Foo>();
+    fn resolve_shared<T>(&self) -> Rc<T>
+    where
+        T: 'static + ?Sized,
+    {
+        let type_id = TypeId::of::<Rc<T>>();
         let resolvable_type = self
             .shared_items
             .get(&type_id)
-            .expect("No registered implementations of type Foo found");
-        resolvable_type
-            .downcast_ref::<Rc<dyn Foo>>()
-            .unwrap()
-            .clone()
+            .expect("No registered implementations of type T found");
+        resolvable_type.downcast_ref::<Rc<T>>().unwrap().clone()
     }
 }
 
