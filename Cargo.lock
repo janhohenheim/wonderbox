@@ -41,11 +41,11 @@ name = "vax"
 version = "0.1.0"
 dependencies = [
  "maplit 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "vax-derive 0.1.0",
+ "vax-codegen 0.1.0",
 ]
 
 [[package]]
-name = "vax-derive"
+name = "vax-codegen"
 version = "0.1.0"
 dependencies = [
  "quote 0.6.12 (registry+https://github.com/rust-lang/crates.io-index)",

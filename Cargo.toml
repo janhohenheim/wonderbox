@@ -6,7 +6,7 @@ edition = "2018"
 
 [dependencies]
 maplit = "1.0.1"
-vax-derive = { path = "vax-codegen" }
+vax-codegen = { path = "vax-codegen" }
 
 [workspace]
 members = [
