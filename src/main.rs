@@ -1,3 +1,5 @@
+#![feature(custom_attribute)]
+
 use core::any::TypeId;
 use maplit::hashmap;
 use std::collections::HashMap;
@@ -66,8 +68,10 @@ enum ResolvableType {
     Foo(Rc<dyn Foo>),
 }
 
+#[resolvable]
 trait Foo {}
 
+#[implementationt(crate::Foo)]
 struct FooImpl {}
 
 impl FooImpl {
