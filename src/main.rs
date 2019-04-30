@@ -42,6 +42,13 @@ mod tests {
     use std::rc::Rc;
 
     #[test]
+    fn resolves_none_when_not_registered() {
+        let container = Container::new();
+        let resolved = container.resolve::<String>();
+        assert!(resolved.is_none())
+    }
+
+    #[test]
     fn resolves_string() {
         let mut container = Container::new();
         container.register(String::new());
