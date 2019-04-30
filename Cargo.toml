@@ -5,9 +5,3 @@ authors = ["Jan Nils Ferner <jn_ferner@hotmail.de>"]
 edition = "2018"
 
 [dependencies]
-vax-codegen = { path = "vax-codegen" }
-
-[workspace]
-members = [
-    "vax-codegen"
-]

@@ -1,5 +1,3 @@
-#![feature(custom_attribute)]
-
 use core::any::TypeId;
 use std::any::Any;
 use std::collections::HashMap;
@@ -58,10 +56,8 @@ impl Container {
     }
 }
 
-#[resolvable]
 trait Foo {}
 
-#[implementationt(crate::Foo)]
 struct FooImpl {}
 
 impl FooImpl {
