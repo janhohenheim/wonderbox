@@ -9,13 +9,13 @@ fn main() {
     container.register(Rc::new(String::new()));
     println!("Registered a string!");
 
-    let _string: Rc<String> = container.resolve_shared::<String>();
+    let _string = container.resolve_shared::<String>();
     println!("Resolved a string!");
 
     container.register(Rc::new(FooImpl::new()) as Rc<dyn Foo>);
     println!("Registered a Foo!");
 
-    let _foo: Rc<dyn Foo> = container.resolve_shared::<dyn Foo>();
+    let _foo = container.resolve_shared::<dyn Foo>();
     println!("Resolved a dyn Foo!");
 }
 
