@@ -2,6 +2,7 @@
 
 use core::any::TypeId;
 use maplit::hashmap;
+use std::any::Any;
 use std::collections::HashMap;
 use std::rc::Rc;
 
@@ -10,7 +11,11 @@ fn main() {
 
     let _string: Rc<String> = container.resolve_shared();
 
+    println!("Resolved a string!");
+
     let _foo: Rc<dyn Foo> = container.resolve_shared();
+
+    println!("Resolved a dyn Foo!");
 }
 
 trait Resolvable<T>
@@ -21,17 +26,18 @@ where
 }
 
 struct Container {
-    shared_items: HashMap<TypeId, ResolvableType>,
+    shared_items: HashMap<TypeId, Box<dyn Any>>,
 }
 
 impl Container {
     fn new() -> Self {
-        Self {
-            shared_items: hashmap! {
-                TypeId::of::<String>() => ResolvableType::String(Rc::new(String::new())),
-                TypeId::of::<Foo>() => ResolvableType::Foo(Rc::new(FooImpl::new()))
-            },
-        }
+        let mut shared_items: HashMap<TypeId, Box<dyn Any>> = HashMap::new();
+        shared_items.insert(TypeId::of::<String>(), Box::new(Rc::new(String::new())));
+        shared_items.insert(
+            TypeId::of::<Foo>(),
+            Box::new(Rc::new(FooImpl::new()) as Rc<dyn Foo>),
+        );
+        Self { shared_items }
     }
 }
 
@@ -42,10 +48,10 @@ impl Resolvable<String> for Container {
             .shared_items
             .get(&type_id)
             .expect("No registered implementations of type String found");
-        match resolvable_type {
-            ResolvableType::String(value) => value.clone(),
-            _ => panic!(""),
-        }
+        resolvable_type
+            .downcast_ref::<Rc<String>>()
+            .unwrap()
+            .clone()
     }
 }
 
@@ -56,16 +62,11 @@ impl Resolvable<Foo> for Container {
             .shared_items
             .get(&type_id)
             .expect("No registered implementations of type Foo found");
-        match resolvable_type {
-            ResolvableType::Foo(value) => value.clone(),
-            _ => panic!(""),
-        }
+        resolvable_type
+            .downcast_ref::<Rc<dyn Foo>>()
+            .unwrap()
+            .clone()
     }
-}
-
-enum ResolvableType {
-    String(Rc<String>),
-    Foo(Rc<dyn Foo>),
 }
 
 #[resolvable]
