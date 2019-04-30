@@ -19,19 +19,14 @@ fn main() {
     println!("Resolved a dyn Foo!");
 }
 
+#[derive(Default)]
 struct Container {
     shared_items: HashMap<TypeId, Box<dyn Any>>,
 }
 
 impl Container {
     fn new() -> Self {
-        let mut shared_items: HashMap<TypeId, Box<dyn Any>> = HashMap::new();
-        shared_items.insert(TypeId::of::<String>(), Box::new(Rc::new(String::new())));
-        shared_items.insert(
-            TypeId::of::<Foo>(),
-            Box::new(Rc::new(FooImpl::new()) as Rc<dyn Foo>),
-        );
-        Self { shared_items }
+        Self::default()
     }
 
     fn register<T>(&mut self, implementation: T) -> &mut Self
