@@ -91,12 +91,22 @@ mod tests {
     }
 
     #[test]
-    fn resolves_factory_of_trait_object() {
+    fn resolves_factory_of_rc_of_trait_object() {
         let mut container = Container::new();
         let factory = Box::new(|_container: &Container| Rc::new(FooImpl::new()) as Rc<dyn Foo>);
         container.register_factory(factory);
 
         let resolved = container.resolve::<Rc<dyn Foo>>();
+        assert!(resolved.is_some())
+    }
+
+    #[test]
+    fn resolves_factory_of_box_of_trait_object() {
+        let mut container = Container::new();
+        let factory = Box::new(|_container: &Container| Box::new(FooImpl::new()) as Box<dyn Foo>);
+        container.register_factory(factory);
+
+        let resolved = container.resolve::<Box<dyn Foo>>();
         assert!(resolved.is_some())
     }
 
