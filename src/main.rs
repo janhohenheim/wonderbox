@@ -1,3 +1,5 @@
+#![feature(specialization)]
+
 use core::any::TypeId;
 use std::any::Any;
 use std::collections::HashMap;
@@ -31,11 +33,38 @@ impl Container {
             .insert(TypeId::of::<T>(), implementation);
         self
     }
+}
 
-    fn resolve<T>(&self) -> Option<T>
-    where
-        T: 'static + Clone,
-    {
+trait Resolvable<T> {
+    fn resolve(&self) -> Option<T>;
+}
+
+impl<T> Resolvable<T> for Container
+where
+    T: 'static,
+{
+    default fn resolve(&self) -> Option<T> {
+        let type_id = TypeId::of::<T>();
+        let resolvable_type = self.registered_types.get(&type_id)?;
+        let implementation = match resolvable_type {
+            Implementation::Factory(factory) => {
+                let factory = factory
+                    .downcast_ref::<Box<dyn Fn(&Container) -> T>>()
+                    .expect("Internal error: Couldn't downcast stored type to resolved type");
+                factory(&self)
+            }
+            _ => panic!(),
+        };
+
+        Some(implementation)
+    }
+}
+
+impl<T> Resolvable<T> for Container
+where
+    T: 'static + Clone,
+{
+    fn resolve(&self) -> Option<T> {
         let type_id = TypeId::of::<T>();
         let resolvable_type = self.registered_types.get(&type_id)?;
         let implementation = match resolvable_type {
@@ -68,7 +97,7 @@ mod tests {
     #[test]
     fn resolves_none_when_not_registered() {
         let container = Container::new();
-        let resolved = container.resolve::<String>();
+        let resolved: Option<String> = container.resolve();
         assert!(resolved.is_none())
     }
 
@@ -77,7 +106,7 @@ mod tests {
         let mut container = Container::new();
         container.register(String::new());
 
-        let resolved = container.resolve::<String>();
+        let resolved: Option<String> = container.resolve();
         assert!(resolved.is_some())
     }
 
@@ -86,7 +115,7 @@ mod tests {
         let mut container = Container::new();
         container.register(Rc::new(FooImpl::new()) as Rc<dyn Foo>);
 
-        let resolved = container.resolve::<Rc<dyn Foo>>();
+        let resolved: Option<Rc<dyn Foo>> = container.resolve();
         assert!(resolved.is_some())
     }
 
@@ -96,7 +125,7 @@ mod tests {
         let factory = Box::new(|_container: &Container| Rc::new(FooImpl::new()) as Rc<dyn Foo>);
         container.register_factory(factory);
 
-        let resolved = container.resolve::<Rc<dyn Foo>>();
+        let resolved: Option<Rc<dyn Foo>> = container.resolve();
         assert!(resolved.is_some())
     }
 
@@ -106,7 +135,7 @@ mod tests {
         let factory = Box::new(|_container: &Container| Box::new(FooImpl::new()) as Box<dyn Foo>);
         container.register_factory(factory);
 
-        let resolved = container.resolve::<Box<dyn Foo>>();
+        let resolved: Option<Box<dyn Foo>> = container.resolve();
         assert!(resolved.is_some())
     }
 
