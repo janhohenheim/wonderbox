@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 #[derive(Default)]
 struct Container {
-    shared_items: HashMap<TypeId, Box<dyn Any>>,
+    registered_types: HashMap<TypeId, Box<dyn Any>>,
 }
 
 impl Container {
@@ -16,7 +16,7 @@ impl Container {
     where
         T: 'static,
     {
-        self.shared_items
+        self.registered_types
             .insert(TypeId::of::<T>(), Box::new(implementation));
         self
     }
@@ -26,7 +26,7 @@ impl Container {
         T: 'static + Clone,
     {
         let type_id = TypeId::of::<T>();
-        let resolvable_type = self.shared_items.get(&type_id)?;
+        let resolvable_type = self.registered_types.get(&type_id)?;
         Some(
             resolvable_type
                 .downcast_ref::<T>()
