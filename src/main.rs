@@ -1,7 +1,6 @@
 use core::any::TypeId;
 use std::any::Any;
 use std::collections::HashMap;
-use std::rc::Rc;
 
 #[derive(Default)]
 struct Container {
@@ -22,16 +21,16 @@ impl Container {
         self
     }
 
-    fn resolve_shared<T>(&self) -> Rc<T>
+    fn resolve<T>(&self) -> T
     where
-        T: 'static + ?Sized,
+        T: 'static + Clone,
     {
-        let type_id = TypeId::of::<Rc<T>>();
+        let type_id = TypeId::of::<T>();
         let resolvable_type = self
             .shared_items
             .get(&type_id)
             .expect("No registered implementations of type T found");
-        resolvable_type.downcast_ref::<Rc<T>>().unwrap().clone()
+        resolvable_type.downcast_ref::<T>().unwrap().clone()
     }
 }
 
@@ -42,9 +41,9 @@ mod tests {
     #[test]
     fn resolves_string() {
         let mut container = Container::new();
-        container.register(Rc::new(String::new()));
+        container.register(String::new());
 
-        let _string = container.resolve_shared::<String>();
+        let _string = container.resolve::<String>();
     }
 
     #[test]
@@ -52,7 +51,7 @@ mod tests {
         let mut container = Container::new();
         container.register(Rc::new(FooImpl::new()) as Rc<dyn Foo>);
 
-        let _foo = container.resolve_shared::<dyn Foo>();
+        let _foo = container.resolve::<Rc<dyn Foo>>();
     }
 
     trait Foo {}
