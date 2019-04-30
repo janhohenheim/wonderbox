@@ -10,5 +10,5 @@ vax-derive = { path = "vax-derive" }
 
 [workspace]
 members = [
-    "vax-derive"
+    "vax-codegen"
 ]
