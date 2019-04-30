@@ -21,16 +21,18 @@ impl Container {
         self
     }
 
-    fn resolve<T>(&self) -> T
+    fn resolve<T>(&self) -> Option<T>
     where
         T: 'static + Clone,
     {
         let type_id = TypeId::of::<T>();
-        let resolvable_type = self
-            .shared_items
-            .get(&type_id)
-            .expect("No registered implementations of type T found");
-        resolvable_type.downcast_ref::<T>().unwrap().clone()
+        let resolvable_type = self.shared_items.get(&type_id)?;
+        Some(
+            resolvable_type
+                .downcast_ref::<T>()
+                .expect("Internal error: Couldn't downcast stored type to resolved type")
+                .clone(),
+        )
     }
 }
 
@@ -44,7 +46,8 @@ mod tests {
         let mut container = Container::new();
         container.register(String::new());
 
-        let _string = container.resolve::<String>();
+        let resolved = container.resolve::<String>();
+        assert!(resolved.is_some())
     }
 
     #[test]
@@ -52,7 +55,8 @@ mod tests {
         let mut container = Container::new();
         container.register(Rc::new(FooImpl::new()) as Rc<dyn Foo>);
 
-        let _foo = container.resolve::<Rc<dyn Foo>>();
+        let resolved = container.resolve::<Rc<dyn Foo>>();
+        assert!(resolved.is_some())
     }
 
     trait Foo {}
