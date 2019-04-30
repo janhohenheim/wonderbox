@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 #[derive(Default)]
 struct Container {
-    registered_types: HashMap<TypeId, Box<dyn Any>>,
+    registered_types: HashMap<TypeId, Implementation>,
 }
 
 impl Container {
@@ -16,8 +16,19 @@ impl Container {
     where
         T: 'static,
     {
+        let implementation = Implementation::Concrete(Box::new(implementation));
         self.registered_types
-            .insert(TypeId::of::<T>(), Box::new(implementation));
+            .insert(TypeId::of::<T>(), implementation);
+        self
+    }
+
+    fn register_factory<T>(&mut self, factory: Box<Fn(&Container) -> T>) -> &mut Self
+    where
+        T: 'static,
+    {
+        let implementation = Implementation::Factory(Box::new(factory));
+        self.registered_types
+            .insert(TypeId::of::<T>(), implementation);
         self
     }
 
@@ -27,13 +38,26 @@ impl Container {
     {
         let type_id = TypeId::of::<T>();
         let resolvable_type = self.registered_types.get(&type_id)?;
-        Some(
-            resolvable_type
+        let implementation = match resolvable_type {
+            Implementation::Concrete(implementation) => implementation
                 .downcast_ref::<T>()
                 .expect("Internal error: Couldn't downcast stored type to resolved type")
                 .clone(),
-        )
+            Implementation::Factory(factory) => {
+                let factory = factory
+                    .downcast_ref::<Box<dyn Fn(&Container) -> T>>()
+                    .expect("Internal error: Couldn't downcast stored type to resolved type");
+                factory(&self)
+            }
+        };
+
+        Some(implementation)
     }
+}
+
+enum Implementation {
+    Concrete(Box<dyn Any>),
+    Factory(Box<dyn Any>),
 }
 
 #[cfg(test)]
@@ -61,6 +85,16 @@ mod tests {
     fn resolves_rc_of_trait_object() {
         let mut container = Container::new();
         container.register(Rc::new(FooImpl::new()) as Rc<dyn Foo>);
+
+        let resolved = container.resolve::<Rc<dyn Foo>>();
+        assert!(resolved.is_some())
+    }
+
+    #[test]
+    fn resolves_factory_of_trait_object() {
+        let mut container = Container::new();
+        let factory = Box::new(|_container: &Container| Rc::new(FooImpl::new()) as Rc<dyn Foo>);
+        container.register_factory(factory);
 
         let resolved = container.resolve::<Rc<dyn Foo>>();
         assert!(resolved.is_some())
