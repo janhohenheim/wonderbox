@@ -37,6 +37,7 @@ impl Container {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::rc::Rc;
 
     #[test]
     fn resolves_string() {
