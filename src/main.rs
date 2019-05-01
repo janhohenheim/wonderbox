@@ -108,6 +108,17 @@ mod tests {
         assert!(resolved.is_some())
     }
 
+    #[test]
+    fn resolves_boxed_factory_of_box_of_trait_object() {
+        let mut container = Container::new();
+        let factory = |_container: &Container| Box::new(FooImpl::new()) as Box<dyn Foo>;
+        let boxed_factory = Box::new(factory);
+        container.register_factory(boxed_factory);
+
+        let resolved = container.resolve::<Box<dyn Foo>>();
+        assert!(resolved.is_some())
+    }
+
     trait Foo {}
 
     struct FooImpl {}
