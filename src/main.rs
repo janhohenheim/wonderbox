@@ -6,7 +6,7 @@ use std::collections::HashMap;
 
 #[derive(Default)]
 struct Container {
-    registered_types: HashMap<TypeId, Implementation>,
+    registered_types: HashMap<TypeId, Box<dyn Any>>,
 }
 
 impl Container {
@@ -14,79 +14,50 @@ impl Container {
         Self::default()
     }
 
-    fn register<T>(&mut self, implementation: T) -> &mut Self
+    fn register<ImplementationType, Value>(
+        &mut self,
+        implementation: ImplementationType,
+    ) -> &mut Self
     where
-        T: 'static,
+        ImplementationType: 'static + Implementation<Value>,
+        Value: 'static,
     {
-        let implementation = Implementation::Concrete(Box::new(implementation));
         self.registered_types
-            .insert(TypeId::of::<T>(), implementation);
+            .insert(TypeId::of::<Value>(), Box::new(Box::new(implementation)));
         self
     }
 
-    fn register_factory<T>(&mut self, factory: Box<Fn(&Container) -> T>) -> &mut Self
+    fn resolve<T>(&self) -> Option<T>
     where
         T: 'static,
     {
-        let implementation = Implementation::Factory(Box::new(factory));
-        self.registered_types
-            .insert(TypeId::of::<T>(), implementation);
-        self
-    }
-}
-
-trait Resolvable<T> {
-    fn resolve(&self) -> Option<T>;
-}
-
-impl<T> Resolvable<T> for Container
-where
-    T: 'static,
-{
-    default fn resolve(&self) -> Option<T> {
         let type_id = TypeId::of::<T>();
         let resolvable_type = self.registered_types.get(&type_id)?;
-        let implementation = match resolvable_type {
-            Implementation::Factory(factory) => {
-                let factory = factory
-                    .downcast_ref::<Box<dyn Fn(&Container) -> T>>()
-                    .expect("Internal error: Couldn't downcast stored type to resolved type");
-                factory(&self)
-            }
-            _ => panic!(),
-        };
-
-        Some(implementation)
+        let implementation = resolvable_type
+            .downcast_ref::<Box<dyn Implementation<T>>>()
+            .expect("Internal error: Couldn't downcast stored type to resolved type");
+        let value: T = Implementation::get_value(implementation.as_ref(), &self);
+        Some(value)
     }
 }
 
-impl<T> Resolvable<T> for Container
+trait Implementation<T> {
+    fn get_value(&self, container: &Container) -> T;
+}
+
+impl<T> Implementation<T> for T
 where
     T: 'static + Clone,
 {
-    fn resolve(&self) -> Option<T> {
-        let type_id = TypeId::of::<T>();
-        let resolvable_type = self.registered_types.get(&type_id)?;
-        let implementation = match resolvable_type {
-            Implementation::Concrete(implementation) => implementation
-                .downcast_ref::<T>()
-                .expect("Internal error: Couldn't downcast stored type to resolved type")
-                .clone(),
-            Implementation::Factory(factory) => {
-                let factory = factory
-                    .downcast_ref::<Box<dyn Fn(&Container) -> T>>()
-                    .expect("Internal error: Couldn't downcast stored type to resolved type");
-                factory(&self)
-            }
-        };
-
-        Some(implementation)
+    fn get_value(&self, _container: &Container) -> T {
+        self.clone()
     }
 }
 
-enum Implementation {
-    Concrete(Box<dyn Any>),
-    Factory(Box<dyn Any>),
+impl<T> Implementation<T> for Fn(&Container) -> T {
+    fn get_value(&self, container: &Container) -> T {
+        (self)(container)
+    }
 }
 
 #[cfg(test)]
@@ -123,9 +94,9 @@ mod tests {
     fn resolves_factory_of_rc_of_trait_object() {
         let mut container = Container::new();
         let factory = Box::new(|_container: &Container| Rc::new(FooImpl::new()) as Rc<dyn Foo>);
-        container.register_factory(factory);
+        container.register(factory);
 
-        let resolved: Option<Rc<dyn Foo>> = container.resolve();
+        let resolved = container.resolve::<Rc<dyn Foo>>();
         assert!(resolved.is_some())
     }
 
@@ -133,7 +104,7 @@ mod tests {
     fn resolves_factory_of_box_of_trait_object() {
         let mut container = Container::new();
         let factory = Box::new(|_container: &Container| Box::new(FooImpl::new()) as Box<dyn Foo>);
-        container.register_factory(factory);
+        container.register(factory);
 
         let resolved: Option<Box<dyn Foo>> = container.resolve();
         assert!(resolved.is_some())
