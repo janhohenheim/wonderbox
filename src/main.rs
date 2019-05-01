@@ -63,7 +63,7 @@ mod tests {
     #[test]
     fn resolves_none_when_not_registered() {
         let container = Container::new();
-        let resolved: Option<String> = container.resolve();
+        let resolved = container.resolve::<String>();
         assert!(resolved.is_none())
     }
 
@@ -72,7 +72,7 @@ mod tests {
         let mut container = Container::new();
         container.register_clone(String::new());
 
-        let resolved: Option<String> = container.resolve();
+        let resolved = container.resolve::<String>();
         assert!(resolved.is_some())
     }
 
@@ -81,7 +81,7 @@ mod tests {
         let mut container = Container::new();
         container.register_clone(Rc::new(FooImpl::new()) as Rc<dyn Foo>);
 
-        let resolved: Option<Rc<dyn Foo>> = container.resolve();
+        let resolved = container.resolve::<Rc<dyn Foo>>();
         assert!(resolved.is_some())
     }
 
@@ -101,7 +101,7 @@ mod tests {
         let factory = Box::new(|_container: &Container| Box::new(FooImpl::new()) as Box<dyn Foo>);
         container.register_factory(factory);
 
-        let resolved: Option<Box<dyn Foo>> = container.resolve();
+        let resolved = container.resolve::<Box<dyn Foo>>();
         assert!(resolved.is_some())
     }
 
