@@ -35,9 +35,11 @@ impl Container {
         Factory: 'static + Fn(&Container) -> Implementation,
         Implementation: 'static,
     {
+        let implementation_factory: Box<ImplementationFactory<Implementation>> =
+            Box::new(implementation_factory);
         self.registered_types.insert(
             TypeId::of::<Implementation>(),
-            Box::new(Box::new(implementation_factory)),
+            Box::new(implementation_factory),
         );
         self
     }
@@ -89,7 +91,7 @@ mod tests {
     #[test]
     fn resolves_factory_of_rc_of_trait_object() {
         let mut container = Container::new();
-        let factory = Box::new(|_container: &Container| Rc::new(FooImpl::new()) as Rc<dyn Foo>);
+        let factory = |_container: &Container| Rc::new(FooImpl::new()) as Rc<dyn Foo>;
         container.register_factory(factory);
 
         let resolved = container.resolve::<Rc<dyn Foo>>();
@@ -99,7 +101,7 @@ mod tests {
     #[test]
     fn resolves_factory_of_box_of_trait_object() {
         let mut container = Container::new();
-        let factory = Box::new(|_container: &Container| Box::new(FooImpl::new()) as Box<dyn Foo>);
+        let factory = |_container: &Container| Box::new(FooImpl::new()) as Box<dyn Foo>;
         container.register_factory(factory);
 
         let resolved = container.resolve::<Box<dyn Foo>>();
