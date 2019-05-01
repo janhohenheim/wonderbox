@@ -20,7 +20,8 @@ impl Container {
     where
         T: 'static + Clone,
     {
-        let implementation_factory = move |_container: &Container| implementation.clone();
+        let implementation_factory: Box<ImplementationFactory<T>> =
+            Box::new(move |_container: &Container| implementation.clone());
         self.registered_types
             .insert(TypeId::of::<T>(), Box::new(implementation_factory));
         self
@@ -36,7 +37,7 @@ impl Container {
     {
         self.registered_types.insert(
             TypeId::of::<Implementation>(),
-            Box::new(implementation_factory),
+            Box::new(Box::new(implementation_factory)),
         );
         self
     }
@@ -48,7 +49,7 @@ impl Container {
         let type_id = TypeId::of::<T>();
         let resolvable_type = self.registered_types.get(&type_id)?;
         let implementation_factory = resolvable_type
-            .downcast_ref::<&ImplementationFactory<T>>()
+            .downcast_ref::<Box<ImplementationFactory<T>>>()
             .expect("Internal error: Couldn't downcast stored type to resolved type");
         let value: T = implementation_factory(&self);
         Some(value)
