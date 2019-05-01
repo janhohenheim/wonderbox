@@ -9,21 +9,35 @@ struct Container {
     registered_types: HashMap<TypeId, Box<dyn Any>>,
 }
 
+type ImplementationFactory<T> = dyn Fn(&Container) -> T;
+
 impl Container {
     fn new() -> Self {
         Self::default()
     }
 
-    fn register<ImplementationType, Value>(
+    fn register_clone<T>(&mut self, implementation: T) -> &mut Self
+    where
+        T: 'static + Clone,
+    {
+        let implementation_factory = move |_container: &Container| implementation.clone();
+        self.registered_types
+            .insert(TypeId::of::<T>(), Box::new(implementation_factory));
+        self
+    }
+
+    fn register_factory<Factory, Implementation>(
         &mut self,
-        implementation: ImplementationType,
+        implementation_factory: Factory,
     ) -> &mut Self
     where
-        ImplementationType: 'static + Implementation<Value>,
-        Value: 'static,
+        Factory: 'static + Fn(&Container) -> Implementation,
+        Implementation: 'static,
     {
-        self.registered_types
-            .insert(TypeId::of::<Value>(), Box::new(Box::new(implementation)));
+        self.registered_types.insert(
+            TypeId::of::<Implementation>(),
+            Box::new(implementation_factory),
+        );
         self
     }
 
@@ -33,30 +47,11 @@ impl Container {
     {
         let type_id = TypeId::of::<T>();
         let resolvable_type = self.registered_types.get(&type_id)?;
-        let implementation = resolvable_type
-            .downcast_ref::<Box<dyn Implementation<T>>>()
+        let implementation_factory = resolvable_type
+            .downcast_ref::<&ImplementationFactory<T>>()
             .expect("Internal error: Couldn't downcast stored type to resolved type");
-        let value: T = Implementation::get_value(implementation.as_ref(), &self);
+        let value: T = implementation_factory(&self);
         Some(value)
-    }
-}
-
-trait Implementation<T> {
-    fn get_value(&self, container: &Container) -> T;
-}
-
-impl<T> Implementation<T> for T
-where
-    T: 'static + Clone,
-{
-    fn get_value(&self, _container: &Container) -> T {
-        self.clone()
-    }
-}
-
-impl<T> Implementation<T> for Fn(&Container) -> T {
-    fn get_value(&self, container: &Container) -> T {
-        (self)(container)
     }
 }
 
@@ -75,7 +70,7 @@ mod tests {
     #[test]
     fn resolves_string() {
         let mut container = Container::new();
-        container.register(String::new());
+        container.register_clone(String::new());
 
         let resolved: Option<String> = container.resolve();
         assert!(resolved.is_some())
@@ -84,7 +79,7 @@ mod tests {
     #[test]
     fn resolves_rc_of_trait_object() {
         let mut container = Container::new();
-        container.register(Rc::new(FooImpl::new()) as Rc<dyn Foo>);
+        container.register_clone(Rc::new(FooImpl::new()) as Rc<dyn Foo>);
 
         let resolved: Option<Rc<dyn Foo>> = container.resolve();
         assert!(resolved.is_some())
@@ -94,7 +89,7 @@ mod tests {
     fn resolves_factory_of_rc_of_trait_object() {
         let mut container = Container::new();
         let factory = Box::new(|_container: &Container| Rc::new(FooImpl::new()) as Rc<dyn Foo>);
-        container.register(factory);
+        container.register_factory(factory);
 
         let resolved = container.resolve::<Rc<dyn Foo>>();
         assert!(resolved.is_some())
@@ -104,7 +99,7 @@ mod tests {
     fn resolves_factory_of_box_of_trait_object() {
         let mut container = Container::new();
         let factory = Box::new(|_container: &Container| Box::new(FooImpl::new()) as Box<dyn Foo>);
-        container.register(factory);
+        container.register_factory(factory);
 
         let resolved: Option<Box<dyn Foo>> = container.resolve();
         assert!(resolved.is_some())
