@@ -17,18 +17,18 @@ use std::any::Any;
 use std::collections::HashMap;
 
 #[derive(Default)]
-struct Container {
+pub struct Container {
     registered_types: HashMap<TypeId, Box<dyn Any>>,
 }
 
 type ImplementationFactory<T> = dyn Fn(&Container) -> T;
 
 impl Container {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self::default()
     }
 
-    fn register_clone<T>(&mut self, implementation: T) -> &mut Self
+    pub fn register_clone<T>(&mut self, implementation: T) -> &mut Self
     where
         T: 'static + Clone,
     {
@@ -39,7 +39,7 @@ impl Container {
         self
     }
 
-    fn register_factory<Factory, Implementation>(
+    pub fn register_factory<Factory, Implementation>(
         &mut self,
         implementation_factory: Factory,
     ) -> &mut Self
@@ -56,7 +56,7 @@ impl Container {
         self
     }
 
-    fn resolve<T>(&self) -> Option<T>
+    pub fn resolve<T>(&self) -> Option<T>
     where
         T: 'static,
     {
