@@ -119,6 +119,40 @@ mod tests {
         assert!(resolved.is_some())
     }
 
+    #[test]
+    fn resolves_boxed_factory_with_clone_dependency() {
+        let mut container = Container::new();
+
+        container.register_clone("foo".to_string());
+        container.register_factory(|container| {
+            let dependency = container.resolve::<String>().unwrap();
+            let bar = BarImpl::new(dependency);
+            Box::new(bar) as Box<dyn Bar>
+        });
+
+        let resolved = container.resolve::<Box<dyn Bar>>();
+        assert!(resolved.is_some())
+    }
+
+    #[test]
+    fn resolves_boxed_factory_with_factory_dependency() {
+        let mut container = Container::new();
+
+        container.register_clone("foo".to_string());
+        container
+            .register_factory(|_container: &Container| Box::new(FooImpl::new()) as Box<dyn Foo>);
+        container.register_factory(|container| {
+            let clone_dependency = container.resolve::<String>().unwrap();
+            let _factory_dependency = container.resolve::<Box<dyn Foo>>().unwrap();
+
+            let bar = BarImpl::new(clone_dependency);
+            Box::new(bar) as Box<dyn Bar>
+        });
+
+        let resolved = container.resolve::<Box<dyn Bar>>();
+        assert!(resolved.is_some())
+    }
+
     trait Foo {}
 
     struct FooImpl {}
@@ -130,4 +164,21 @@ mod tests {
     }
 
     impl Foo for FooImpl {}
+
+    trait Bar {}
+
+    struct BarImpl {
+        _stored_string: String,
+    }
+
+    impl BarImpl {
+        fn new(stored_string: String) -> Self {
+            BarImpl {
+                _stored_string: stored_string,
+            }
+        }
+    }
+
+    impl Bar for BarImpl {}
+
 }
