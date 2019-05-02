@@ -5,3 +5,9 @@ authors = ["Jan Nils Ferner <jn_ferner@hotmail.de>"]
 edition = "2018"
 
 [dependencies]
+wonderbox-codegen = { path = "wonderbox-codegen" }
+
+[workspace]
+members = [
+    "wonderbox-codegen"
+]
