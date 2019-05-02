@@ -38,7 +38,7 @@ impl Container {
     ///
     /// Registering a simple type:
     /// ```
-    /// use vax::Container;
+    /// use wonderbox::Container;
     ///
     /// let mut container = Container::new();
     /// container.register_clone(String::new());
@@ -46,7 +46,7 @@ impl Container {
     ///
     /// Registering an Rc of a trait object type:
     /// ```
-    /// use vax::Container;
+    /// use wonderbox::Container;
     /// use std::rc::Rc;
     ///
     /// let mut container = Container::new();
@@ -76,7 +76,7 @@ impl Container {
     ///
     /// Registering a simple factory:
     /// ```
-    /// use vax::Container;
+    /// use wonderbox::Container;
     ///
     /// let mut container = Container::new();
     /// container.register_factory(|_| String::new());
@@ -84,7 +84,7 @@ impl Container {
     ///
     /// Registering a factory for a trait object with dependencies:
     /// ```
-    /// use vax::Container;
+    /// use wonderbox::Container;
     /// use std::rc::Rc;
     ///
     /// let mut container = Container::new();
@@ -127,7 +127,7 @@ impl Container {
     /// # Examples
     /// Resolve a simple registered type
     /// ```
-    /// use vax::Container;
+    /// use wonderbox::Container;
     ///
     /// let mut container = Container::new();
     /// container.register_clone(String::new());
@@ -138,7 +138,7 @@ impl Container {
     ///
     /// Resolve a trait object
     /// ```
-    /// use vax::Container;
+    /// use wonderbox::Container;
     ///
     /// let mut container = Container::new();
     ///
