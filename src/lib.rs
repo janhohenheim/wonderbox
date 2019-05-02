@@ -1,10 +1,12 @@
-#![feature(specialization)]
+//! A minimalistic [IoC] library.
+//!
+//! [IoC]: https://en.wikipedia.org/wiki/Inversion_of_control
+
 #![warn(missing_docs, clippy::dbg_macro, clippy::unimplemented)]
 #![deny(
     rust_2018_idioms,
     future_incompatible,
     missing_debug_implementations,
-    clippy::doc_markdown,
     clippy::default_trait_access,
     clippy::enum_glob_use,
     clippy::needless_borrow,
@@ -16,7 +18,8 @@ use core::any::TypeId;
 use std::any::Any;
 use std::collections::HashMap;
 
-#[derive(Default)]
+/// The IoC container
+#[derive(Default, Debug)]
 pub struct Container {
     registered_types: HashMap<TypeId, Box<dyn Any>>,
 }
@@ -24,10 +27,37 @@ pub struct Container {
 type ImplementationFactory<T> = dyn Fn(&Container) -> T;
 
 impl Container {
+    /// Create a new empty [`Container`].
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Register the implementation of a type that implements [`Clone`].
+    ///
+    /// # Examples
+    ///
+    /// Registering a simple type:
+    /// ```
+    /// use vax::Container;
+    ///
+    /// let mut container = Container::new();
+    /// container.register_clone(String::new());
+    /// ```
+    ///
+    /// Registering an Rc of a trait object type:
+    /// ```
+    /// use vax::Container;
+    /// use std::rc::Rc;
+    ///
+    /// let mut container = Container::new();
+    /// container.register_clone(Rc::new(FooImpl)as Rc<dyn Foo>);
+    ///
+    /// trait Foo {}
+    /// struct FooImpl;
+    /// impl Foo for FooImpl {}
+    /// ```
+    ///
+    /// [`Clone`]: https://doc.rust-lang.org/std/clone/trait.Clone.html
     pub fn register_clone<T>(&mut self, implementation: T) -> &mut Self
     where
         T: 'static + Clone,
@@ -39,6 +69,41 @@ impl Container {
         self
     }
 
+    /// Register a function that returns the implementation of a type.
+    /// Can be used to resolve dependencies.
+    ///
+    /// # Examples
+    ///
+    /// Registering a simple factory:
+    /// ```
+    /// use vax::Container;
+    ///
+    /// let mut container = Container::new();
+    /// container.register_factory(|_| String::new());
+    /// ```
+    ///
+    /// Registering a factory for a trait object with dependencies:
+    /// ```
+    /// use vax::Container;
+    /// use std::rc::Rc;
+    ///
+    /// let mut container = Container::new();
+    /// let dependency = "I'm a dependency".to_string();
+    /// container.register_clone(dependency);
+    /// container.register_factory(|container| {
+    ///     let dependency = container.resolve::<String>().unwrap();
+    ///     let registered_type = FooImpl { stored_string: dependency };
+    ///     Box::new(registered_type) as Box<dyn Foo>
+    /// });
+    ///
+    /// trait Foo {}
+    /// struct FooImpl {
+    ///     stored_string: String
+    /// }
+    /// impl Foo for FooImpl {}
+    /// ```
+    ///
+    /// [`Clone`]: https://doc.rust-lang.org/std/clone/trait.Clone.html
     pub fn register_factory<Factory, Implementation>(
         &mut self,
         implementation_factory: Factory,
@@ -56,6 +121,43 @@ impl Container {
         self
     }
 
+    /// Retrieves the registered implementation of the specified type.
+    /// # Errors
+    /// Returns `None` if the type was not registered
+    /// # Examples
+    /// Resolve a simple registered type
+    /// ```
+    /// use vax::Container;
+    ///
+    /// let mut container = Container::new();
+    /// container.register_clone(String::new());
+    ///
+    /// let resolved = container.resolve::<String>();
+    /// assert!(resolved.is_some())
+    /// ```
+    ///
+    /// Resolve a trait object
+    /// ```
+    /// use vax::Container;
+    ///
+    /// let mut container = Container::new();
+    ///
+    /// container.register_clone("foo".to_string());
+    /// container.register_factory(|container| {
+    ///     let dependency = container.resolve::<String>().unwrap();
+    ///     let foo = FooImpl { stored_string: dependency };
+    ///     Box::new(foo) as Box<dyn Foo>
+    /// });
+    ///
+    /// let resolved = container.resolve::<Box<dyn Foo>>();
+    /// assert!(resolved.is_some());
+    ///
+    /// trait Foo {}
+    /// struct FooImpl {
+    ///     stored_string: String
+    /// }
+    /// impl Foo for FooImpl {}
+    /// ```
     pub fn resolve<T>(&self) -> Option<T>
     where
         T: 'static,
@@ -65,7 +167,7 @@ impl Container {
         let implementation_factory = resolvable_type
             .downcast_ref::<Box<ImplementationFactory<T>>>()
             .expect("Internal error: Couldn't downcast stored type to resolved type");
-        let value: T = implementation_factory(&self);
+        let value: T = implementation_factory(self);
         Some(value)
     }
 }
