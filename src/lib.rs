@@ -121,6 +121,35 @@ impl Container {
         self
     }
 
+    /// Register all the element from another container into this container.
+    /// # Examples
+    /// ```
+    /// use wonderbox::Container;
+    ///
+    /// let mut first_container = Container::new();
+    /// first_container.register_clone("foo".to_string());
+    ///
+    /// let mut second_container = Container::new();
+    /// second_container.register_factory(|container| {
+    ///     let dependency = container.resolve::<String>().unwrap();
+    ///     let foo = FooImpl { stored_string: dependency };
+    ///     Box::new(foo) as Box<dyn Foo>
+    /// });
+    ///
+    /// first_container.register_container(second_container);
+    ///
+    /// trait Foo {}
+    /// struct FooImpl {
+    ///     stored_string: String
+    /// }
+    /// impl Foo for FooImpl {}
+    /// ```
+    pub fn register_container(&mut self, container: Container) -> &mut Self {
+        self.registered_types
+            .extend(container.registered_types.into_iter());
+        self
+    }
+
     /// Retrieves the registered implementation of the specified type.
     /// # Errors
     /// Returns `None` if the type was not registered
@@ -264,6 +293,24 @@ mod tests {
         });
 
         let resolved = container.resolve::<Box<dyn Bar>>();
+        assert!(resolved.is_some())
+    }
+
+    #[test]
+    fn resolves_type_from_merged_containers() {
+        let mut first_container = Container::new();
+        first_container.register_clone("foo".to_string());
+
+        let mut second_container = Container::new();
+        second_container.register_factory(|container| {
+            let dependency = container.resolve::<String>().unwrap();
+            let bar = BarImpl::new(dependency);
+            Box::new(bar) as Box<dyn Bar>
+        });
+
+        first_container.register_container(second_container);
+
+        let resolved = first_container.resolve::<Box<dyn Bar>>();
         assert!(resolved.is_some())
     }
 
