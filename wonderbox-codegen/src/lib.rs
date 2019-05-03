@@ -3,8 +3,8 @@ extern crate proc_macro;
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::{
-    parse_macro_input, punctuated::Punctuated, token::Comma, AttributeArgs, FnArg, FnDecl,
-    ImplItem, ImplItemMethod, Item, ItemImpl, ReturnType, Type,
+    parse_macro_input, parse_quote, punctuated::Punctuated, token::Comma, AttributeArgs, FnArg,
+    FnDecl, ImplItem, ImplItemMethod, Item, ItemImpl, ReturnType, Type,
 };
 
 #[proc_macro_attribute]
@@ -62,7 +62,7 @@ fn parse_constructors(item_impl: &ItemImpl) -> Vec<&FunctionArguments> {
         .iter()
         .filter_map(parse_method)
         .map(|method| &method.sig.decl)
-        .filter(|declaration| has_return_type(declaration, &item_impl.self_ty))
+        .filter(|declaration| returns_self(declaration, &item_impl.self_ty))
         .map(|declaration| &declaration.inputs)
         .filter(|inputs| has_no_self_parameter(inputs))
         .collect()
@@ -75,10 +75,12 @@ fn parse_method(impl_item: &ImplItem) -> Option<&ImplItemMethod> {
     }
 }
 
-fn has_return_type(declaration: &FnDecl, type_: &Box<Type>) -> bool {
+fn returns_self(declaration: &FnDecl, explicit_self_type: &Type) -> bool {
     match &declaration.output {
         ReturnType::Default => false,
-        ReturnType::Type(_, return_type) => return_type == type_,
+        ReturnType::Type(_, return_type) => {
+            **return_type == *explicit_self_type || **return_type == generate_self_type()
+        }
     }
 }
 
@@ -90,6 +92,12 @@ fn has_no_self_parameter(inputs: &Punctuated<FnArg, Comma>) -> bool {
             _ => true,
         },
         None => true,
+    }
+}
+
+fn generate_self_type() -> Type {
+    parse_quote! {
+        Self
     }
 }
 
