@@ -67,16 +67,7 @@ fn parse_constructors(item_impl: &ItemImpl) -> Vec<&FunctionArguments> {
         .map(|method| &method.sig.decl)
         .filter(|declaration| has_return_type(declaration, &item_impl.self_ty))
         .map(|declaration| &declaration.inputs)
-        .filter(|inputs| {
-            let first_input = inputs.first();
-            match first_input {
-                Some(first_arg) => match first_arg.value() {
-                    FnArg::SelfRef(_) | FnArg::SelfValue(_) => false,
-                    _ => true,
-                },
-                None => false,
-            }
-        })
+        .filter(|inputs| has_no_self_parameter(inputs))
         .collect()
 }
 
@@ -84,6 +75,17 @@ fn has_return_type(declaration: &FnDecl, type_: &Box<Type>) -> bool {
     match &declaration.output {
         ReturnType::Default => false,
         ReturnType::Type(_, return_type) => return_type == type_,
+    }
+}
+
+fn has_no_self_parameter(inputs: &Punctuated<FnArg, Comma>) -> bool {
+    let first_input = inputs.first();
+    match first_input {
+        Some(first_arg) => match first_arg.value() {
+            FnArg::SelfRef(_) | FnArg::SelfValue(_) => false,
+            _ => true,
+        },
+        None => false,
     }
 }
 
