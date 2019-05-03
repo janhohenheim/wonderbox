@@ -5,6 +5,8 @@ use quote::quote;
 use syn;
 
 #[proc_macro_attribute]
-pub fn constructor(_attr: TokenStream, item: TokenStream) -> TokenStream {
-    dbg!(item)
+pub fn constructor(attr: TokenStream, item: TokenStream) -> TokenStream {
+    println!("attr: \"{}\"", attr.to_string());
+    println!("item: \"{}\"", item.to_string());
+    item
 }
