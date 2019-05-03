@@ -3,8 +3,8 @@ extern crate proc_macro;
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::{
-    parse_macro_input, punctuated::Punctuated, token::Comma, AttributeArgs, FnArg, ImplItem, Item,
-    ItemImpl, ReturnType,
+    parse_macro_input, punctuated::Punctuated, token::Comma, AttributeArgs, FnArg, FnDecl,
+    ImplItem, ImplItemMethod, Item, ItemImpl, ReturnType, Type,
 };
 
 #[proc_macro_attribute]
@@ -65,10 +65,7 @@ fn parse_constructors(item_impl: &ItemImpl) -> Vec<&FunctionArguments> {
             _ => None,
         })
         .map(|method| &method.sig.decl)
-        .filter(|declaration| match &declaration.output {
-            ReturnType::Default => false,
-            ReturnType::Type(_, type_) => type_ == &item_impl.self_ty,
-        })
+        .filter(|declaration| has_return_type(declaration, &item_impl.self_ty))
         .map(|declaration| &declaration.inputs)
         .filter(|inputs| {
             let first_input = inputs.first();
@@ -81,6 +78,13 @@ fn parse_constructors(item_impl: &ItemImpl) -> Vec<&FunctionArguments> {
             }
         })
         .collect()
+}
+
+fn has_return_type(declaration: &FnDecl, type_: &Box<Type>) -> bool {
+    match &declaration.output {
+        ReturnType::Default => false,
+        ReturnType::Type(_, return_type) => return_type == type_,
+    }
 }
 
 const ATTRIBUTE_NAME: &str = "#[resolve_dependencies]";
