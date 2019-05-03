@@ -5,8 +5,17 @@ use quote::quote;
 use syn;
 
 #[proc_macro_attribute]
-pub fn constructor(attr: TokenStream, item: TokenStream) -> TokenStream {
-    println!("attr: \"{}\"", attr.to_string());
-    println!("item: \"{:#?}\"", item.to_string());
+pub fn resolve_dependencies(attr: TokenStream, mut item: TokenStream) -> TokenStream {
+    println!("attr: \"{}\"", attr);
+    println!("item: \"{:#?}\"", item);
+    let some_impl: TokenStream = quote!(
+        impl BarImpl {
+            fn generated_fn(&self) {
+
+            }
+        }
+    )
+    .into();
+    item.extend(some_impl);
     item
 }
