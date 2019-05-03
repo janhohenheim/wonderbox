@@ -60,15 +60,19 @@ fn parse_constructors(item_impl: &ItemImpl) -> Vec<&FunctionArguments> {
     item_impl
         .items
         .iter()
-        .filter_map(|impl_item| match impl_item {
-            ImplItem::Method(method) => Some(method),
-            _ => None,
-        })
+        .filter_map(parse_method)
         .map(|method| &method.sig.decl)
         .filter(|declaration| has_return_type(declaration, &item_impl.self_ty))
         .map(|declaration| &declaration.inputs)
         .filter(|inputs| has_no_self_parameter(inputs))
         .collect()
+}
+
+fn parse_method(impl_item: &ImplItem) -> Option<&ImplItemMethod> {
+    match impl_item {
+        ImplItem::Method(method) => Some(method),
+        _ => None,
+    }
 }
 
 fn has_return_type(declaration: &FnDecl, type_: &Box<Type>) -> bool {
