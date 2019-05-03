@@ -2,6 +2,7 @@
 //!
 //! [IoC]: https://en.wikipedia.org/wiki/Inversion_of_control
 
+#![feature(custom_attribute)]
 #![warn(missing_docs, clippy::dbg_macro, clippy::unimplemented)]
 #![deny(
     rust_2018_idioms,
@@ -17,6 +18,7 @@
 use core::any::TypeId;
 use std::any::Any;
 use std::collections::HashMap;
+use wonderbox_codegen::constructor;
 
 /// The IoC container
 #[derive(Default, Debug)]
@@ -333,6 +335,7 @@ mod tests {
     }
 
     impl BarImpl {
+        #[constructor]
         fn new(stored_string: String) -> Self {
             BarImpl {
                 _stored_string: stored_string,
@@ -341,5 +344,4 @@ mod tests {
     }
 
     impl Bar for BarImpl {}
-
 }
