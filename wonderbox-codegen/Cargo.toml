@@ -12,4 +12,4 @@ quote = "0.6.12"
 
 [dependencies.syn]
 version = "0.15.33"
-features = ["full"]
+features = ["full", "extra-traits"]

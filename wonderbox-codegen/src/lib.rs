@@ -4,7 +4,7 @@ use proc_macro::TokenStream;
 use quote::quote;
 use syn::{
     parse_macro_input, punctuated::Punctuated, token::Comma, AttributeArgs, FnArg, ImplItem, Item,
-    ItemImpl,
+    ItemImpl, ReturnType,
 };
 
 #[proc_macro_attribute]
@@ -42,7 +42,7 @@ fn validate_item_impl(item_impl: &ItemImpl) {
 
 type FunctionArguments = Punctuated<FnArg, Comma>;
 
-fn parse_constructors(item_impl: &ItemImpl) -> impl Iterator<Item = &FunctionArguments> {
+fn parse_constructors(item_impl: &ItemImpl) -> Vec<&FunctionArguments> {
     item_impl
         .items
         .iter()
@@ -50,7 +50,12 @@ fn parse_constructors(item_impl: &ItemImpl) -> impl Iterator<Item = &FunctionArg
             ImplItem::Method(method) => Some(method),
             _ => None,
         })
-        .map(|method| &method.sig.decl.inputs)
+        .map(|method| &method.sig.decl)
+        .filter(|declaration| match &declaration.output {
+            ReturnType::Default => false,
+            ReturnType::Type(_, type_) => type_ == &item_impl.self_ty,
+        })
+        .map(|declaration| &declaration.inputs)
         .filter(|inputs| {
             let first_input = inputs.first();
             match first_input {
@@ -61,6 +66,7 @@ fn parse_constructors(item_impl: &ItemImpl) -> impl Iterator<Item = &FunctionArg
                 None => false,
             }
         })
+        .collect()
 }
 
 const ATTRIBUTE_NAME: &str = "#[resolve_dependencies]";
