@@ -20,8 +20,22 @@ pub fn resolve_dependencies(attr: TokenStream, item: TokenStream) -> TokenStream
 
     let constructors = parse_constructors(&item);
 
+    if constructors.len() != 1 {
+        panic!("Expected one constructor, found {}", constructors.len());
+    }
+
+    let constructor_args = constructors.first().unwrap();
+
+    let (impl_generics, type_generics, where_clause) = item.generics.split_for_impl();
+
     TokenStream::from(quote! {
         #item
+
+        impl #impl_generics wonderbox::internal::AutoResolvable for #self_ty #type_generics #where_clause {
+             fn resolve(container: &wonderbox::Container) -> Option<Self> {
+                unimplemented!()
+             }
+        }
     })
 }
 

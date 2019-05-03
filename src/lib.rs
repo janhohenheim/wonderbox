@@ -204,6 +204,15 @@ impl Container {
     }
 }
 
+#[doc(hidden)]
+pub mod internal {
+    use super::*;
+
+    pub trait AutoResolvable: Sized {
+        fn resolve(container: &Container) -> Option<Self>;
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
