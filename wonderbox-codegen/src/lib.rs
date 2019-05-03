@@ -79,7 +79,7 @@ fn returns_self(declaration: &FnDecl, explicit_self_type: &Type) -> bool {
     match &declaration.output {
         ReturnType::Default => false,
         ReturnType::Type(_, return_type) => {
-            **return_type == *explicit_self_type || **return_type == generate_self_type()
+            **return_type == generate_self_type() || **return_type == *explicit_self_type
         }
     }
 }
