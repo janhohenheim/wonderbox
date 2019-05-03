@@ -2,27 +2,35 @@ extern crate proc_macro;
 
 use proc_macro::TokenStream;
 use quote::quote;
-use syn;
+use syn::{parse_macro_input, AttributeArgs, Item};
 
 #[proc_macro_attribute]
 pub fn resolve_dependencies(attr: TokenStream, item: TokenStream) -> TokenStream {
-    println!("attr: \"{}\"", attr);
-    println!("item: \"{:#?}\"", item);
-    let some_impl: TokenStream = quote!(
+    let item = parse_macro_input!(item as Item);
+    let attr = parse_macro_input!(attr as AttributeArgs);
+
+    //let item_impl = parse_item_impl(item);
+
+    let some_impl = quote!(
         impl BarImpl {
             fn generated_fn(&self) {
 
             }
         }
-    )
-    .into();
+    );
 
-    concat_token_streams(item, some_impl)
+    TokenStream::from(quote! {
+        #item
+
+        #some_impl
+    })
 }
 
-fn concat_token_streams(first_stream: TokenStream, second_stream: TokenStream) -> TokenStream {
-    let mut stream = TokenStream::new();
-    stream.extend(first_stream);
-    stream.extend(second_stream);
-    stream
+fn parse_item_impl(item: Item) -> syn::ItemImpl {
+    match item {
+        syn::Item::Impl(item_impl) => item_impl,
+        _ => panic!("{} needs to be placed over an impl block", ATTRIBUTE_NAME),
+    }
 }
+
+const ATTRIBUTE_NAME: &str = "#[resolve_dependencies]";
