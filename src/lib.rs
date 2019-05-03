@@ -19,8 +19,6 @@ use core::any::TypeId;
 use std::any::Any;
 use std::collections::HashMap;
 
-use wonderbox_codegen::resolve_dependencies;
-
 /// The IoC container
 #[derive(Default, Debug)]
 pub struct Container {
@@ -344,7 +342,6 @@ mod tests {
         _stored_string: String,
     }
 
-    #[resolve_dependencies]
     impl BarImpl {
         fn new(stored_string: String) -> Self {
             BarImpl {
