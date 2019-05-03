@@ -85,7 +85,7 @@ fn has_no_self_parameter(inputs: &Punctuated<FnArg, Comma>) -> bool {
             FnArg::SelfRef(_) | FnArg::SelfValue(_) => false,
             _ => true,
         },
-        None => false,
+        None => true,
     }
 }
 
