@@ -105,20 +105,17 @@ impl Container {
     /// ```
     ///
     /// [`Clone`]: https://doc.rust-lang.org/std/clone/trait.Clone.html
-    pub fn register_factory<Factory, Implementation>(
+    pub fn register_factory<T>(
         &mut self,
-        implementation_factory: Factory,
+        implementation_factory: impl Fn(&Container) -> T + 'static,
     ) -> &mut Self
     where
-        Factory: 'static + Fn(&Container) -> Implementation,
-        Implementation: 'static,
+        T: 'static,
     {
-        let implementation_factory: Box<ImplementationFactory<Implementation>> =
+        let implementation_factory: Box<ImplementationFactory<T>> =
             Box::new(implementation_factory);
-        self.registered_types.insert(
-            TypeId::of::<Implementation>(),
-            Box::new(implementation_factory),
-        );
+        self.registered_types
+            .insert(TypeId::of::<T>(), Box::new(implementation_factory));
         self
     }
 
