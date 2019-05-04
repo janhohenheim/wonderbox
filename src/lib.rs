@@ -15,6 +15,7 @@
     clippy::explicit_into_iter_loop
 )]
 
+use crate::internal::AutoResolvable;
 use core::any::TypeId;
 use std::any::Any;
 use std::collections::HashMap;
@@ -116,6 +117,26 @@ impl Container {
             Box::new(implementation_factory);
         self.registered_types
             .insert(TypeId::of::<T>(), Box::new(implementation_factory));
+        self
+    }
+
+    /// Register a type while automatically resolving its dependencies.
+    /// Only works with types which have an `#[resolve_dependencies] attribute on an `Impl` containing constructors.`
+    pub fn register_autoresolved<ResolvedType, RegisteredType>(
+        &mut self,
+        registration_fn: impl Fn(Option<ResolvedType>) -> RegisteredType + 'static,
+    ) -> &mut Self
+    where
+        ResolvedType: internal::AutoResolvable,
+        RegisteredType: 'static,
+    {
+        let resolved_type = ResolvedType::resolve(&self);
+        let implementation_factory: Box<ImplementationFactory<RegisteredType>> =
+            Box::new(move |container| registration_fn(ResolvedType::resolve(container)));
+        self.registered_types.insert(
+            TypeId::of::<RegisteredType>(),
+            Box::new(implementation_factory),
+        );
         self
     }
 
