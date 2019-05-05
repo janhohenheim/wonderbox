@@ -33,7 +33,7 @@ pub fn resolve_dependencies(attr: TokenStream, item: TokenStream) -> TokenStream
 }
 
 fn generate_autoresolvable_impl(item: &Item) -> Result<TokenStream> {
-    let item = parse_item_impl(item);
+    let item = parse_item_impl(item)?;
 
     validate_item_impl(&item);
 
@@ -90,10 +90,17 @@ fn generate_autoresolvable_impl(item: &Item) -> Result<TokenStream> {
     }))
 }
 
-fn parse_item_impl(item: &Item) -> &ItemImpl {
+fn parse_item_impl(item: &Item) -> Result<&ItemImpl> {
     match item {
-        Item::Impl(item_impl) => item_impl,
-        _ => panic!("{} needs to be placed over an impl block", ATTRIBUTE_NAME),
+        Item::Impl(item_impl) => Ok(item_impl),
+        _ => {
+            let error_message = format!("{} needs to be placed over an impl block", ATTRIBUTE_NAME);
+            Err(Diagnostic::spanned(
+                item.span_unstable(),
+                Level::Error,
+                error_message,
+            ))
+        }
     }
 }
 
