@@ -12,11 +12,27 @@ use syn::{
     FnDecl, ImplItem, ImplItemMethod, Item, ItemImpl, MethodSig, ReturnType, Type,
 };
 
+type Result<T> = std::result::Result<T, Diagnostic>;
+
 #[proc_macro_attribute]
 pub fn resolve_dependencies(attr: TokenStream, item: TokenStream) -> TokenStream {
     let item = parse_macro_input!(item as Item);
     let attr = parse_macro_input!(attr as AttributeArgs);
 
+    let result = generate_autoresolvable_impl(&item);
+
+    match result {
+        Ok(token_stream) => token_stream,
+        Err(diagnostic) => {
+            diagnostic.emit();
+            TokenStream::from(quote! {
+                #item
+            })
+        }
+    }
+}
+
+fn generate_autoresolvable_impl(item: &Item) -> Result<TokenStream> {
     let item = parse_item_impl(item);
 
     validate_item_impl(&item);
@@ -27,11 +43,11 @@ pub fn resolve_dependencies(attr: TokenStream, item: TokenStream) -> TokenStream
 
     if constructors.len() != 1 {
         let error_message = format!("Expected one constructor, found {}", constructors.len());
-        Diagnostic::spanned(item.span_unstable(), Level::Error, error_message).emit();
-        return quote! {
-            #item
-        }
-        .into();
+        return Err(Diagnostic::spanned(
+            item.span_unstable(),
+            Level::Error,
+            error_message,
+        ));
     }
 
     let constructor = constructors.first().unwrap();
@@ -56,7 +72,7 @@ pub fn resolve_dependencies(attr: TokenStream, item: TokenStream) -> TokenStream
     let (impl_generics, type_generics, where_clause) = item.generics.split_for_impl();
     let ident = &constructor.ident;
 
-    TokenStream::from(quote! {
+    Ok(TokenStream::from(quote! {
         #item
 
         impl #impl_generics wonderbox::internal::AutoResolvable for #self_ty #type_generics #where_clause {
@@ -64,22 +80,30 @@ pub fn resolve_dependencies(attr: TokenStream, item: TokenStream) -> TokenStream
                 Some(Self::#ident(#resolutions))
              }
         }
-    })
+    }))
 }
 
-fn parse_item_impl(item: Item) -> ItemImpl {
+fn parse_item_impl(item: &Item) -> &ItemImpl {
     match item {
         Item::Impl(item_impl) => item_impl,
         _ => panic!("{} needs to be placed over an impl block", ATTRIBUTE_NAME),
     }
 }
 
-fn validate_item_impl(item_impl: &ItemImpl) {
-    assert!(
-        item_impl.trait_.is_none(),
-        "{} must be placed over a direct impl, not a trait impl",
-        ATTRIBUTE_NAME
-    )
+fn validate_item_impl(item_impl: &ItemImpl) -> Result<()> {
+    if item_impl.trait_.is_none() {
+        let error_message = format!(
+            "{} must be placed over a direct impl, not a trait impl",
+            ATTRIBUTE_NAME
+        );
+        Err(Diagnostic::spanned(
+            item_impl.span_unstable(),
+            Level::Error,
+            error_message,
+        ))
+    } else {
+        Ok(())
+    }
 }
 
 type FunctionArguments = Punctuated<FnArg, Comma>;
