@@ -16,5 +16,5 @@ impl Foo {
 #[test]
 fn test() {
     let mut container = Container::new();
-    container.register_autoresolved(|foo: Option<Foo>| Some(foo?));
+    container.register_autoresolved(|foo: Option<Foo>| foo.unwrap());
 }
