@@ -18,7 +18,7 @@ impl Foo for FooImpl {}
 #[test]
 fn test() {
     let mut container = Container::new();
-    container.register_autoresolved(|foo: Option<FooImpl>| Box::new(foo.unwrap()) as Box<dyn Foo>);
+    container.register_autoresolved(|foo: Option<FooImpl>| Some(Box::new(foo?) as Box<dyn Foo>));
 
     let foo = container.resolve::<Box<dyn Foo>>();
     assert!(foo.is_some());
