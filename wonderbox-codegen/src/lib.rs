@@ -17,9 +17,9 @@ type Result<T> = std::result::Result<T, Diagnostic>;
 #[proc_macro_attribute]
 pub fn resolve_dependencies(attr: TokenStream, item: TokenStream) -> TokenStream {
     let item = parse_macro_input!(item as Item);
-    let attribute_args = parse_macro_input!(attr as AttributeArgs);
+    let _attr = parse_macro_input!(attr as AttributeArgs);
 
-    let result = generate_autoresolvable_impl(&item, &attribute_args);
+    let result = generate_autoresolvable_impl(&item);
 
     let emitted_tokens = match result {
         Ok(token_stream) => token_stream,
@@ -34,12 +34,7 @@ pub fn resolve_dependencies(attr: TokenStream, item: TokenStream) -> TokenStream
     emitted_tokens.into()
 }
 
-fn generate_autoresolvable_impl(
-    item: &Item,
-    attribute_args: &AttributeArgs,
-) -> Result<proc_macro2::TokenStream> {
-    validate_attribute_args(attribute_args)?;
-
+fn generate_autoresolvable_impl(item: &Item) -> Result<proc_macro2::TokenStream> {
     let item = parse_item_impl(item)?;
 
     validate_item_impl(item)?;
@@ -68,19 +63,6 @@ fn generate_autoresolvable_impl(
              }
         }
     })
-}
-
-fn validate_attribute_args(attribute_args: &AttributeArgs) -> Result<()> {
-    if attribute_args.is_empty() {
-        Ok(())
-    } else {
-        let error_message = format!("{} accepts no attribute arguments", ATTRIBUTE_NAME);
-        Err(Diagnostic::spanned(
-            attribute_args.first().unwrap().span_unstable(),
-            Level::Error,
-            error_message,
-        ))
-    }
 }
 
 fn parse_item_impl(item: &Item) -> Result<&ItemImpl> {
