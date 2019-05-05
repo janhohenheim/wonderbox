@@ -4,7 +4,8 @@ extern crate proc_macro;
 
 mod spanned;
 
-use proc_macro::TokenStream;
+use crate::spanned::SpannedUnstable;
+use proc_macro::{Diagnostic, Level, TokenStream};
 use quote::quote;
 use syn::{
     parse_macro_input, parse_quote, punctuated::Punctuated, token::Comma, AttributeArgs, FnArg,
@@ -25,7 +26,12 @@ pub fn resolve_dependencies(attr: TokenStream, item: TokenStream) -> TokenStream
     let constructors = parse_constructors(&item);
 
     if constructors.len() != 1 {
-        panic!("Expected one constructor, found {}", constructors.len());
+        let error_message = format!("Expected one constructor, found {}", constructors.len());
+        Diagnostic::spanned(item.span_unstable(), Level::Error, error_message).emit();
+        return quote! {
+            #item
+        }
+        .into();
     }
 
     let constructor_args = constructors.first().unwrap();
