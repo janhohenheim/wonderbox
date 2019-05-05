@@ -1,4 +1,8 @@
+#![feature(proc_macro_diagnostic)]
+
 extern crate proc_macro;
+
+mod spanned;
 
 use proc_macro::TokenStream;
 use quote::quote;
