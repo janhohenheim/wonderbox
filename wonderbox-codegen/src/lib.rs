@@ -37,7 +37,7 @@ pub fn resolve_dependencies(attr: TokenStream, item: TokenStream) -> TokenStream
 fn generate_autoresolvable_impl(item: &Item) -> Result<proc_macro2::TokenStream> {
     let item = parse_item_impl(item)?;
 
-    validate_item_impl(&item);
+    validate_item_impl(&item)?;
 
     let self_ty = &item.self_ty;
 
@@ -88,6 +88,8 @@ fn parse_item_impl(item: &Item) -> Result<&ItemImpl> {
 
 fn validate_item_impl(item_impl: &ItemImpl) -> Result<()> {
     if item_impl.trait_.is_none() {
+        Ok(())
+    } else {
         let error_message = format!(
             "{} must be placed over a direct impl, not a trait impl",
             ATTRIBUTE_NAME
@@ -97,8 +99,6 @@ fn validate_item_impl(item_impl: &ItemImpl) -> Result<()> {
             Level::Error,
             error_message,
         ))
-    } else {
-        Ok(())
     }
 }
 
