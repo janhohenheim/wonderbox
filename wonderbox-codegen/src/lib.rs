@@ -21,7 +21,7 @@ pub fn resolve_dependencies(attr: TokenStream, item: TokenStream) -> TokenStream
 
     let result = generate_autoresolvable_impl(&item);
 
-    let emited_tokens = match result {
+    let emitted_tokens = match result {
         Ok(token_stream) => token_stream,
         Err(diagnostic) => {
             diagnostic.emit();
@@ -31,7 +31,7 @@ pub fn resolve_dependencies(attr: TokenStream, item: TokenStream) -> TokenStream
         }
     };
 
-    emited_tokens.into()
+    emitted_tokens.into()
 }
 
 fn generate_autoresolvable_impl(item: &Item) -> Result<proc_macro2::TokenStream> {
