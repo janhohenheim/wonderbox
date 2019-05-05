@@ -9,7 +9,7 @@ use proc_macro::{Diagnostic, Level, TokenStream};
 use quote::quote;
 use syn::{
     parse_macro_input, parse_quote, punctuated::Punctuated, token::Comma, AttributeArgs, FnArg,
-    FnDecl, ImplItem, ImplItemMethod, Item, ItemImpl, ReturnType, Type,
+    FnDecl, ImplItem, ImplItemMethod, Item, ItemImpl, MethodSig, ReturnType, Type,
 };
 
 #[proc_macro_attribute]
@@ -34,16 +34,34 @@ pub fn resolve_dependencies(attr: TokenStream, item: TokenStream) -> TokenStream
         .into();
     }
 
-    let constructor_args = constructors.first().unwrap();
+    let constructor = constructors.first().unwrap();
+
+    let constructor_args = constructor.decl.inputs.iter().map(|arg| match arg {
+        FnArg::SelfRef(_) | FnArg::SelfValue(_) => unreachable!(),
+        FnArg::Captured(arg) => &arg.ty,
+        _ => {
+            panic!("Only normal, non self type parameters are supported");
+        }
+    });
+
+    let resolutions: Punctuated<_, Comma> = constructor_args
+        .into_iter()
+        .map(|type_| {
+            quote! {
+                container.resolve::<#type_>()?
+            }
+        })
+        .collect();
 
     let (impl_generics, type_generics, where_clause) = item.generics.split_for_impl();
+    let ident = &constructor.ident;
 
     TokenStream::from(quote! {
         #item
 
         impl #impl_generics wonderbox::internal::AutoResolvable for #self_ty #type_generics #where_clause {
              fn resolve(container: &wonderbox::Container) -> Option<Self> {
-                unimplemented!()
+                Some(Self::#ident(#resolutions))
              }
         }
     })
@@ -66,27 +84,25 @@ fn validate_item_impl(item_impl: &ItemImpl) {
 
 type FunctionArguments = Punctuated<FnArg, Comma>;
 
-fn parse_constructors(item_impl: &ItemImpl) -> Vec<&FunctionArguments> {
+fn parse_constructors(item_impl: &ItemImpl) -> Vec<&MethodSig> {
     item_impl
         .items
         .iter()
-        .filter_map(parse_method)
-        .map(|method| &method.sig.decl)
-        .filter(|declaration| returns_self(declaration, &item_impl.self_ty))
-        .map(|declaration| &declaration.inputs)
-        .filter(|inputs| has_no_self_parameter(inputs))
+        .filter_map(parse_method_signature)
+        .filter(|declaration| returns_self(&declaration.decl, &item_impl.self_ty))
+        .filter(|inputs| has_no_self_parameter(&inputs.decl))
         .collect()
 }
 
-fn parse_method(impl_item: &ImplItem) -> Option<&ImplItemMethod> {
+fn parse_method_signature(impl_item: &ImplItem) -> Option<&MethodSig> {
     match impl_item {
-        ImplItem::Method(method) => Some(method),
+        ImplItem::Method(method) => Some(&method.sig),
         _ => None,
     }
 }
 
-fn returns_self(declaration: &FnDecl, explicit_self_type: &Type) -> bool {
-    match &declaration.output {
+fn returns_self(function: &FnDecl, explicit_self_type: &Type) -> bool {
+    match &function.output {
         ReturnType::Default => false,
         ReturnType::Type(_, return_type) => {
             **return_type == generate_self_type() || **return_type == *explicit_self_type
@@ -94,8 +110,8 @@ fn returns_self(declaration: &FnDecl, explicit_self_type: &Type) -> bool {
     }
 }
 
-fn has_no_self_parameter(inputs: &Punctuated<FnArg, Comma>) -> bool {
-    let first_input = inputs.first();
+fn has_no_self_parameter(function: &FnDecl) -> bool {
+    let first_input = function.inputs.first();
     match first_input {
         Some(first_arg) => match first_arg.value() {
             FnArg::SelfRef(_) | FnArg::SelfValue(_) => false,
