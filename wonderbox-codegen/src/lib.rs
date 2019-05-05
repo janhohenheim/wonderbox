@@ -21,18 +21,20 @@ pub fn resolve_dependencies(attr: TokenStream, item: TokenStream) -> TokenStream
 
     let result = generate_autoresolvable_impl(&item);
 
-    match result {
+    let emited_tokens = match result {
         Ok(token_stream) => token_stream,
         Err(diagnostic) => {
             diagnostic.emit();
-            TokenStream::from(quote! {
+            quote! {
                 #item
-            })
+            }
         }
-    }
+    };
+
+    emited_tokens.into()
 }
 
-fn generate_autoresolvable_impl(item: &Item) -> Result<TokenStream> {
+fn generate_autoresolvable_impl(item: &Item) -> Result<proc_macro2::TokenStream> {
     let item = parse_item_impl(item)?;
 
     validate_item_impl(&item);
@@ -52,34 +54,14 @@ fn generate_autoresolvable_impl(item: &Item) -> Result<TokenStream> {
 
     let constructor = constructors.first().unwrap();
 
-    let constructor_args: Result<Vec<_>> = constructor
-        .decl
-        .inputs
-        .iter()
-        .map(|arg| match arg {
-            FnArg::SelfRef(_) | FnArg::SelfValue(_) => unreachable!(),
-            FnArg::Captured(arg) => Ok(&arg.ty),
-            _ => Err(Diagnostic::spanned(
-                arg.span_unstable(),
-                Level::Error,
-                "Only normal, non self type parameters are supported",
-            )),
-        })
-        .collect();
+    let constructor_argument_types = parse_constructor_argument_types(constructor)?;
 
-    let resolutions: Punctuated<_, Comma> = constructor_args?
-        .into_iter()
-        .map(|type_| {
-            quote! {
-                container.resolve::<#type_>()?
-            }
-        })
-        .collect();
+    let resolutions = generate_type_resolutions(&constructor_argument_types);
 
     let (impl_generics, type_generics, where_clause) = item.generics.split_for_impl();
     let ident = &constructor.ident;
 
-    Ok(TokenStream::from(quote! {
+    Ok(quote! {
         #item
 
         impl #impl_generics wonderbox::internal::AutoResolvable for #self_ty #type_generics #where_clause {
@@ -87,7 +69,7 @@ fn generate_autoresolvable_impl(item: &Item) -> Result<TokenStream> {
                 Some(Self::#ident(#resolutions))
              }
         }
-    }))
+    })
 }
 
 fn parse_item_impl(item: &Item) -> Result<&ItemImpl> {
@@ -157,6 +139,34 @@ fn has_no_self_parameter(function: &FnDecl) -> bool {
         },
         None => true,
     }
+}
+
+fn parse_constructor_argument_types(constructor: &MethodSig) -> Result<Vec<&Type>> {
+    constructor
+        .decl
+        .inputs
+        .iter()
+        .map(|arg| match arg {
+            FnArg::SelfRef(_) | FnArg::SelfValue(_) => unreachable!(),
+            FnArg::Captured(arg) => Ok(&arg.ty),
+            _ => Err(Diagnostic::spanned(
+                arg.span_unstable(),
+                Level::Error,
+                "Only normal, non self type parameters are supported",
+            )),
+        })
+        .collect()
+}
+
+fn generate_type_resolutions(types: &[&Type]) -> Punctuated<proc_macro2::TokenStream, Comma> {
+    types
+        .iter()
+        .map(|type_| {
+            quote! {
+                container.resolve::<#type_>()?
+            }
+        })
+        .collect()
 }
 
 fn generate_self_type() -> Type {
