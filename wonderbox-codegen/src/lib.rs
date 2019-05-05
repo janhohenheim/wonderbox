@@ -37,20 +37,13 @@ pub fn resolve_dependencies(attr: TokenStream, item: TokenStream) -> TokenStream
 fn generate_autoresolvable_impl(item: &Item) -> Result<proc_macro2::TokenStream> {
     let item = parse_item_impl(item)?;
 
-    validate_item_impl(&item)?;
+    validate_item_impl(item)?;
 
     let self_ty = &item.self_ty;
 
     let constructors = parse_constructors(&item);
 
-    if constructors.len() != 1 {
-        let error_message = format!("Expected one constructor, found {}", constructors.len());
-        return Err(Diagnostic::spanned(
-            item.span_unstable(),
-            Level::Error,
-            error_message,
-        ));
-    }
+    validate_constructors(item, &constructors)?;
 
     let constructor = constructors.first().unwrap();
 
@@ -94,6 +87,19 @@ fn validate_item_impl(item_impl: &ItemImpl) -> Result<()> {
             "{} must be placed over a direct impl, not a trait impl",
             ATTRIBUTE_NAME
         );
+        Err(Diagnostic::spanned(
+            item_impl.span_unstable(),
+            Level::Error,
+            error_message,
+        ))
+    }
+}
+
+fn validate_constructors(item_impl: &ItemImpl, constructors: &[&MethodSig]) -> Result<()> {
+    if constructors.len() == 1 {
+        Ok(())
+    } else {
+        let error_message = format!("Expected one constructor, found {}", constructors.len());
         Err(Diagnostic::spanned(
             item_impl.span_unstable(),
             Level::Error,
