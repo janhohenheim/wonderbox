@@ -52,15 +52,22 @@ fn generate_autoresolvable_impl(item: &Item) -> Result<TokenStream> {
 
     let constructor = constructors.first().unwrap();
 
-    let constructor_args = constructor.decl.inputs.iter().map(|arg| match arg {
-        FnArg::SelfRef(_) | FnArg::SelfValue(_) => unreachable!(),
-        FnArg::Captured(arg) => &arg.ty,
-        _ => {
-            panic!("Only normal, non self type parameters are supported");
-        }
-    });
+    let constructor_args: Result<Vec<_>> = constructor
+        .decl
+        .inputs
+        .iter()
+        .map(|arg| match arg {
+            FnArg::SelfRef(_) | FnArg::SelfValue(_) => unreachable!(),
+            FnArg::Captured(arg) => Ok(&arg.ty),
+            _ => Err(Diagnostic::spanned(
+                arg.span_unstable(),
+                Level::Error,
+                "Only normal, non self type parameters are supported",
+            )),
+        })
+        .collect();
 
-    let resolutions: Punctuated<_, Comma> = constructor_args
+    let resolutions: Punctuated<_, Comma> = constructor_args?
         .into_iter()
         .map(|type_| {
             quote! {
