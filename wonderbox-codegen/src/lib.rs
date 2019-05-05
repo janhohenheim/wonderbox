@@ -9,7 +9,7 @@ use proc_macro::{Diagnostic, Level, TokenStream};
 use quote::quote;
 use syn::{
     parse_macro_input, parse_quote, punctuated::Punctuated, token::Comma, AttributeArgs, FnArg,
-    FnDecl, ImplItem, ImplItemMethod, Item, ItemImpl, MethodSig, ReturnType, Type,
+    FnDecl, ImplItem, Item, ItemImpl, MethodSig, ReturnType, Type,
 };
 
 type Result<T> = std::result::Result<T, Diagnostic>;
@@ -17,7 +17,7 @@ type Result<T> = std::result::Result<T, Diagnostic>;
 #[proc_macro_attribute]
 pub fn resolve_dependencies(attr: TokenStream, item: TokenStream) -> TokenStream {
     let item = parse_macro_input!(item as Item);
-    let attr = parse_macro_input!(attr as AttributeArgs);
+    let _attr = parse_macro_input!(attr as AttributeArgs);
 
     let result = generate_autoresolvable_impl(&item);
 
@@ -107,8 +107,6 @@ fn validate_constructors(item_impl: &ItemImpl, constructors: &[&MethodSig]) -> R
         ))
     }
 }
-
-type FunctionArguments = Punctuated<FnArg, Comma>;
 
 fn parse_constructors(item_impl: &ItemImpl) -> Vec<&MethodSig> {
     item_impl

@@ -127,10 +127,9 @@ impl Container {
         registration_fn: impl Fn(Option<ResolvedType>) -> RegisteredType + 'static,
     ) -> &mut Self
     where
-        ResolvedType: internal::AutoResolvable,
+        ResolvedType: AutoResolvable,
         RegisteredType: 'static,
     {
-        let resolved_type = ResolvedType::resolve(&self);
         let implementation_factory: Box<ImplementationFactory<RegisteredType>> =
             Box::new(move |container| registration_fn(ResolvedType::resolve(container)));
         self.registered_types.insert(
