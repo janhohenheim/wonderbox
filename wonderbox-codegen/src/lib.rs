@@ -45,7 +45,7 @@ fn generate_autoresolvable_impl(item: &Item) -> Result<proc_macro2::TokenStream>
 
     validate_constructors(item, &constructors)?;
 
-    let constructor = constructors.first().unwrap();
+    let constructor = determine_constructor_to_autoresolve(&constructors);
 
     let constructor_argument_types = parse_constructor_argument_types(constructor)?;
 
@@ -106,6 +106,12 @@ fn validate_constructors(item_impl: &ItemImpl, constructors: &[&MethodSig]) -> R
             error_message,
         ))
     }
+}
+
+fn determine_constructor_to_autoresolve<'a, 'b>(
+    constructors: &'a [&'b MethodSig],
+) -> &'b MethodSig {
+    constructors.first().unwrap()
 }
 
 fn parse_constructors(item_impl: &ItemImpl) -> Vec<&MethodSig> {
