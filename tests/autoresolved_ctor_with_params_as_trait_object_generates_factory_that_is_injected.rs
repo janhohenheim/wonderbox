@@ -22,19 +22,19 @@ trait Bar {
 }
 
 struct BarImpl {
-    foo_factory: Box<dyn Fn(String) -> Box<dyn Foo>>,
+    foo_factory: Box<dyn Fn() -> Box<dyn Foo>>,
 }
 
 #[resolve_dependencies]
 impl BarImpl {
-    fn new(foo_factory: Box<dyn Fn(String) -> Box<dyn Foo>>) -> Self {
+    fn new(foo_factory: Box<dyn Fn() -> Box<dyn Foo>>) -> Self {
         Self { foo_factory }
     }
 }
 
 impl Bar for BarImpl {
     fn create_foo(&self) -> Box<dyn Foo> {
-        (self.foo_factory)("bar".to_string())
+        (self.foo_factory)()
     }
 }
 

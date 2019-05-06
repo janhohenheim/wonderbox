@@ -160,7 +160,7 @@ impl Container {
     /// ```
     pub fn register_autoresolved<ResolvedType, RegisteredType>(
         &mut self,
-        registration_fn: impl Fn(Option<ResolvedType>) -> RegisteredType + 'static,
+        registration_fn: impl Fn(Option<ResolvedType>) -> RegisteredType + Copy + 'static,
     ) -> &mut Self
     where
         ResolvedType: AutoResolvable,
@@ -172,6 +172,21 @@ impl Container {
             TypeId::of::<RegisteredType>(),
             Arc::new(RwLock::new(implementation_factory)),
         );
+
+        let curried_implementation_factory: Box<
+            ImplementationFactory<Box<dyn Fn() -> RegisteredType>>,
+        > = {
+            Box::new(move |container| {
+                let container = container.clone();
+                Box::new(move || registration_fn(ResolvedType::resolve(&container)))
+            })
+        };
+
+        self.registered_types.insert(
+            TypeId::of::<Box<dyn Fn() -> RegisteredType>>(),
+            Arc::new(RwLock::new(curried_implementation_factory)),
+        );
+
         self
     }
 
