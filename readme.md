@@ -1,6 +1,6 @@
 # Wonderbox
 
-A minimalistic [IoC] library.
+A minimalistic [IoC](https://en.wikipedia.org/wiki/Inversion_of_control) library.
 
 ## Examples
 
