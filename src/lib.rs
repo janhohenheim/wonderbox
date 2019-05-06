@@ -173,7 +173,7 @@ impl Container {
             Arc::new(RwLock::new(implementation_factory)),
         );
 
-        let curried_implementation_factory: Box<
+        let partially_applied_implementation_factory: Box<
             ImplementationFactory<Box<dyn Fn() -> RegisteredType>>,
         > = {
             Box::new(move |container| {
@@ -184,7 +184,7 @@ impl Container {
 
         self.registered_types.insert(
             TypeId::of::<Box<dyn Fn() -> RegisteredType>>(),
-            Arc::new(RwLock::new(curried_implementation_factory)),
+            Arc::new(RwLock::new(partially_applied_implementation_factory)),
         );
 
         self
