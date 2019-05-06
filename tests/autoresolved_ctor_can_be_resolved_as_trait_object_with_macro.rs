@@ -1,5 +1,4 @@
-use wonderbox::{register, Container};
-use wonderbox_codegen::resolve_dependencies;
+use wonderbox::{register, resolve_dependencies, Container};
 
 trait Foo {}
 

@@ -1,5 +1,4 @@
-use wonderbox::Container;
-use wonderbox_codegen::resolve_dependencies;
+use wonderbox::{resolve_dependencies, Container};
 
 #[derive(Debug, Default)]
 struct Foo {

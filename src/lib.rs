@@ -2,8 +2,7 @@
 //!
 //! # Examples
 //! ```
-//! use wonderbox::{register, Container};
-//! use wonderbox_codegen::resolve_dependencies;
+//! use wonderbox::{register, Container, resolve_dependencies};
 //!
 //! trait Foo {}
 //!
@@ -46,6 +45,8 @@
     clippy::large_digit_groups,
     clippy::explicit_into_iter_loop
 )]
+
+pub use wonderbox_codegen::resolve_dependencies;
 
 use crate::internal::AutoResolvable;
 use core::any::TypeId;
@@ -233,8 +234,7 @@ impl Container {
     ///
     /// # Examples
     /// ```
-    /// use wonderbox::Container;
-    /// use wonderbox_codegen::resolve_dependencies;
+    /// use wonderbox::{Container, resolve_dependencies};
     ///
     /// trait Foo {}
     ///
@@ -383,8 +383,7 @@ impl Container {
 ///
 /// # Examples
 /// ```
-/// use wonderbox::{register, Container};
-/// use wonderbox_codegen::resolve_dependencies;
+/// use wonderbox::{register, Container, resolve_dependencies};
 ///
 /// trait Foo {}
 ///
