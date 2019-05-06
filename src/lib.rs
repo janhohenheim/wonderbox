@@ -226,7 +226,7 @@ macro_rules! register {
             implementation.unwrap()
         })
     };
-    ($container: ident, $implementation: ty: as Box<$registration: ty>) => {
+    ($container: ident, $implementation: ty as Box< $registration: ty>) => {
         $container.register_autoresolved(|implementation: Option<$implementation>| {
             Box::new(implementation.unwrap()) as Box<$registration>
         })
