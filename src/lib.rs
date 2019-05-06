@@ -122,6 +122,35 @@ impl Container {
 
     /// Register a type while automatically resolving its dependencies.
     /// Only works with types which have an `#[resolve_dependencies] attribute on an `Impl` containing constructors.`
+    ///
+    /// For most registrations it will be easier to use the convenience macro [`register!`].
+    ///
+    /// # Examples
+    /// ```
+    /// use wonderbox::Container;
+    /// trait Foo {}
+    ///
+    /// #[derive(Debug, Default)]
+    /// struct FooImpl {
+    /// stored_string: String,
+    /// }
+    ///
+    /// #[resolve_dependencies]
+    /// impl FooImpl {
+    /// fn new(stored_string: String) -> Self {
+    /// Self { stored_string }
+    /// }
+    /// }
+    ///
+    /// impl Foo for FooImpl {}
+    ///
+    ///     let mut container = Container::new();
+    ///     container.register_clone("foo".to_string());
+    ///     container.register_autoresolved(|foo: Option<FooImpl>| Box::new(foo.unwrap()) as Box<dyn Foo>);
+    ///
+    ///     let foo = container.resolve::<Box<dyn Foo>>();
+    ///     assert!(foo.is_some())
+    /// ```
     pub fn register_autoresolved<ResolvedType, RegisteredType>(
         &mut self,
         registration_fn: impl Fn(Option<ResolvedType>) -> RegisteredType + 'static,
@@ -250,7 +279,7 @@ impl Container {
 ///
 /// let foo = container.resolve::<Box<dyn Foo>>();
 /// assert!(foo.is_some())
-///
+/// ```
 #[macro_export]
 macro_rules! register {
     ($container: ident, $implementation: ty) => {
