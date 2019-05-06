@@ -367,6 +367,15 @@ mod tests {
     }
 
     #[test]
+    fn generates_factory_of_rc_of_trait_object() {
+        let mut container = Container::new();
+        container.register_clone(Rc::new(FooImpl::new()) as Rc<dyn Foo>);
+
+        let resolved = container.resolve::<Box<dyn Fn() -> Rc<dyn Foo>>>();
+        assert!(resolved.is_some())
+    }
+
+    #[test]
     fn resolves_factory_of_rc_of_trait_object() {
         let mut container = Container::new();
         let factory = |_container: &Container| Rc::new(FooImpl::new()) as Rc<dyn Foo>;
@@ -428,6 +437,25 @@ mod tests {
         });
 
         let resolved = container.resolve::<Box<dyn Bar>>();
+        assert!(resolved.is_some())
+    }
+
+    #[test]
+    fn generates_factory_from_type_with_dependency() {
+        let mut container = Container::new();
+
+        container.register_clone("foo".to_string());
+        container
+            .register_factory(|_container: &Container| Box::new(FooImpl::new()) as Box<dyn Foo>);
+        container.register_factory(|container| {
+            let clone_dependency = container.resolve::<String>().unwrap();
+            let _factory_dependency = container.resolve::<Box<dyn Foo>>().unwrap();
+
+            let bar = BarImpl::new(clone_dependency);
+            Box::new(bar) as Box<dyn Bar>
+        });
+
+        let resolved = container.resolve::<Box<dyn Fn() -> Box<dyn Bar>>>();
         assert!(resolved.is_some())
     }
 
