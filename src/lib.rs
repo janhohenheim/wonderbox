@@ -173,14 +173,8 @@ impl Container {
             Arc::new(RwLock::new(implementation_factory)),
         );
 
-        let partially_applied_implementation_factory: Box<
-            ImplementationFactory<Box<dyn Fn() -> RegisteredType>>,
-        > = {
-            Box::new(move |container| {
-                let container = container.clone();
-                Box::new(move || registration_fn(ResolvedType::resolve(&container)))
-            })
-        };
+        let partially_applied_implementation_factory =
+            partially_apply_implementation_factory(registration_fn);
 
         self.registered_types.insert(
             TypeId::of::<Box<dyn Fn() -> RegisteredType>>(),
@@ -318,6 +312,19 @@ macro_rules! register {
             Box::new(implementation.unwrap()) as Box<$registration>
         })
     };
+}
+
+fn partially_apply_implementation_factory<ResolvedType, RegisteredType>(
+    registration_fn: impl Fn(Option<ResolvedType>) -> RegisteredType + Copy + 'static,
+) -> Box<ImplementationFactory<Box<dyn Fn() -> RegisteredType>>>
+where
+    ResolvedType: AutoResolvable,
+    RegisteredType: 'static,
+{
+    Box::new(move |container| {
+        let container = container.clone();
+        Box::new(move || registration_fn(ResolvedType::resolve(&container)))
+    })
 }
 
 #[doc(hidden)]
