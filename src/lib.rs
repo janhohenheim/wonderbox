@@ -19,11 +19,12 @@ use crate::internal::AutoResolvable;
 use core::any::TypeId;
 use std::any::Any;
 use std::collections::HashMap;
+use std::sync::{Arc, RwLock};
 
 /// The IoC container
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
 pub struct Container {
-    registered_types: HashMap<TypeId, Box<dyn Any>>,
+    registered_types: HashMap<TypeId, Arc<RwLock<dyn Any>>>,
 }
 
 type ImplementationFactory<T> = dyn Fn(&Container) -> T;
@@ -66,8 +67,10 @@ impl Container {
     {
         let implementation_factory: Box<ImplementationFactory<T>> =
             Box::new(move |_container: &Container| implementation.clone());
-        self.registered_types
-            .insert(TypeId::of::<T>(), Box::new(implementation_factory));
+        self.registered_types.insert(
+            TypeId::of::<T>(),
+            Arc::new(RwLock::new(implementation_factory)),
+        );
         self
     }
 
@@ -115,8 +118,10 @@ impl Container {
     {
         let implementation_factory: Box<ImplementationFactory<T>> =
             Box::new(implementation_factory);
-        self.registered_types
-            .insert(TypeId::of::<T>(), Box::new(implementation_factory));
+        self.registered_types.insert(
+            TypeId::of::<T>(),
+            Arc::new(RwLock::new(implementation_factory)),
+        );
         self
     }
 
@@ -165,7 +170,7 @@ impl Container {
             Box::new(move |container| registration_fn(ResolvedType::resolve(container)));
         self.registered_types.insert(
             TypeId::of::<RegisteredType>(),
-            Box::new(implementation_factory),
+            Arc::new(RwLock::new(implementation_factory)),
         );
         self
     }
@@ -241,7 +246,11 @@ impl Container {
         T: 'static,
     {
         let type_id = TypeId::of::<T>();
-        let resolvable_type = self.registered_types.get(&type_id)?;
+        let resolvable_type = self
+            .registered_types
+            .get(&type_id)?
+            .read()
+            .expect("A thread accessing this instance of Container is poisoned");
         let implementation_factory = resolvable_type
             .downcast_ref::<Box<ImplementationFactory<T>>>()
             .expect("Internal error: Couldn't downcast stored type to resolved type");
