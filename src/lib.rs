@@ -21,15 +21,14 @@
 //!
 //! impl Foo for FooImpl {}
 //!
-//! #[test]
-//! fn test() {
-//!     let mut container = Container::new();
-//!     container.register_clone("foo".to_string());
-//!     register!(container, FooImpl as Box<dyn Foo>);
 //!
-//!     let foo = container.resolve::<Box<dyn Foo>>();
-//!     assert!(foo.is_some())
-//! }
+//! let mut container = Container::new();
+//! container.register_clone("foo".to_string());
+//! register!(container, FooImpl as Box<dyn Foo>);
+//!
+//! let foo = container.resolve::<Box<dyn Foo>>();
+//! assert!(foo.is_some())
+//!
 //! ```
 //!
 //! [IoC]: https://en.wikipedia.org/wiki/Inversion_of_control
