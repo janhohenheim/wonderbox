@@ -12,8 +12,9 @@ edition = "2018"
 license = "MIT/Apache-2.0"
 keywords = [ "dependency", "injection", "ioc" ]
 
-[dependencies]
-wonderbox-codegen = { path = "wonderbox-codegen" }
+[dependencies.wonderbox-codegen]
+path = "wonderbox-codegen"
+version = "0.1.0"
 
 [workspace]
 members = [
