@@ -67,20 +67,27 @@ impl Container {
         T: 'static + Clone,
     {
         println!("Registering type {}", type_name::<T>());
-        let implementation_clone = implementation.clone();
-        let implementation_factory: Box<ImplementationFactory<T>> =
-            Box::new(move |_container: &Container| implementation_clone.clone());
+        let implementation_factory: Box<ImplementationFactory<T>> = {
+            let implementation = implementation.clone();
+            Box::new(move |_container: &Container| implementation.clone())
+        };
         self.registered_types.insert(
             TypeId::of::<T>(),
             Arc::new(RwLock::new(implementation_factory)),
         );
 
-        let partially_applied_implementation_factory: Box<dyn Fn() -> T> =
-            Box::new(move || implementation.clone());
+        let partially_applied_implementation_factory: Box<
+            ImplementationFactory<Box<dyn Fn() -> T>>,
+        > = Box::new(move |_container: &Container| {
+            let implementation = implementation.clone();
+            Box::new(move || implementation.clone())
+        });
+
         self.registered_types.insert(
             TypeId::of::<Box<dyn Fn() -> T>>(),
             Arc::new(RwLock::new(partially_applied_implementation_factory)),
         );
+
         self
     }
 
