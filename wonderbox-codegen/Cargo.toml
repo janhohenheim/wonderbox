@@ -1,8 +1,15 @@
 [package]
 name = "wonderbox-codegen"
+description = """
+Internally used by wonderbox for code generation. This crate should never by used directly.
+"""
 version = "0.1.0"
 authors = ["Jan Nils Ferner <jn_ferner@hotmail.de>"]
+repository = "https://github.com/jnferner/wonderbox"
+homepage = "https://github.com/jnferner/wonderbox"
+documentation = "https://docs.rs/wonderbox-codegen"
 edition = "2018"
+license = "MIT/Apache-2.0"
 
 [lib]
 proc-macro = true
