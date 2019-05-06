@@ -133,12 +133,29 @@ impl Container {
     where
         T: 'static,
     {
-        let implementation_factory: Box<ImplementationFactory<T>> =
-            Box::new(implementation_factory);
+        let implementation_factory = Arc::new(implementation_factory);
+        let registered_implementation_factory: Box<ImplementationFactory<T>> = {
+            let implementation_factory = implementation_factory.clone();
+            Box::new(move |container| implementation_factory(container))
+        };
         self.registered_types.insert(
             TypeId::of::<T>(),
-            Arc::new(RwLock::new(implementation_factory)),
+            Arc::new(RwLock::new(registered_implementation_factory)),
         );
+
+        let partially_applied_implementation_factory: Box<
+            ImplementationFactory<Box<dyn Fn() -> T>>,
+        > = Box::new(move |container: &Container| {
+            let implementation_factory = implementation_factory.clone();
+            let container = container.clone();
+            Box::new(move || implementation_factory(&container))
+        });
+
+        self.registered_types.insert(
+            TypeId::of::<Box<dyn Fn() -> T>>(),
+            Arc::new(RwLock::new(partially_applied_implementation_factory)),
+        );
+
         self
     }
 
