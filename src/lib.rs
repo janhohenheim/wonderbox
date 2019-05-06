@@ -219,6 +219,38 @@ impl Container {
     }
 }
 
+/// Primary way to register types annotated with `#[resolve_dependencies]`.
+/// This macro is syntax sugar over [`register_autoresolved`]
+///
+/// # Examples
+/// ```
+/// use wonderbox::{register, Container};
+/// use wonderbox_codegen::resolve_dependencies;
+///
+/// trait Foo {}
+///
+/// #[derive(Debug, Default)]
+/// struct FooImpl {
+///     stored_string: String,
+/// }
+///
+/// #[resolve_dependencies]
+/// impl FooImpl {
+///     fn new(stored_string: String) -> Self {
+///         Self { stored_string }
+///     }
+/// }
+///
+/// impl Foo for FooImpl {}
+///
+///
+/// let mut container = Container::new();
+/// container.register_clone("foo".to_string());
+/// register!(container, FooImpl as Box<dyn Foo>);
+///
+/// let foo = container.resolve::<Box<dyn Foo>>();
+/// assert!(foo.is_some())
+///
 #[macro_export]
 macro_rules! register {
     ($container: ident, $implementation: ty) => {
