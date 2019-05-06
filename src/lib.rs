@@ -219,6 +219,20 @@ impl Container {
     }
 }
 
+#[macro_export]
+macro_rules! register {
+    ($container: ident, $implementation: ty) => {
+        $container.register_autoresolved(|implementation: Option<$implementation>| {
+            implementation.unwrap()
+        })
+    };
+    ($container: ident, $implementation: ty: as Box<$registration: ty>) => {
+        $container.register_autoresolved(|implementation: Option<$implementation>| {
+            Box::new(implementation.unwrap()) as Box<$registration>
+        })
+    };
+}
+
 #[doc(hidden)]
 pub mod internal {
     use super::*;
