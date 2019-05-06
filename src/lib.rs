@@ -91,6 +91,42 @@ impl Container {
         self
     }
 
+    /// Register a type by its [`Default`] implementation.
+    ///
+    /// # Examples
+    /// ```
+    /// use wonderbox::Container;
+    ///
+    /// let mut container = Container::new();
+    /// container.register_default::<String>();
+    ///
+    /// let resolved = container.resolve::<String>();
+    /// assert!(resolved.is_some())
+    /// ```
+    /// [`Default`]: https://doc.rust-lang.org/std/default/trait.Default.html
+    pub fn register_default<T>(&mut self) -> &mut Self
+    where
+        T: 'static + Default,
+    {
+        let implementation_factory: Box<ImplementationFactory<T>> =
+            { Box::new(|_container: &Container| T::default()) };
+        self.registered_types.insert(
+            TypeId::of::<T>(),
+            Arc::new(RwLock::new(implementation_factory)),
+        );
+
+        let partially_applied_implementation_factory: Box<
+            ImplementationFactory<Box<dyn Fn() -> T>>,
+        > = Box::new(|_container: &Container| Box::new(|| T::default()));
+
+        self.registered_types.insert(
+            TypeId::of::<Box<dyn Fn() -> T>>(),
+            Arc::new(RwLock::new(partially_applied_implementation_factory)),
+        );
+
+        self
+    }
+
     /// Register a function that returns the implementation of a type.
     /// Can be used to resolve dependencies.
     ///
@@ -402,6 +438,24 @@ mod tests {
         container.register_clone(String::new());
 
         let resolved = container.resolve::<String>();
+        assert!(resolved.is_some())
+    }
+
+    #[test]
+    fn resolves_default() {
+        let mut container = Container::new();
+        container.register_default::<String>();
+
+        let resolved = container.resolve::<String>();
+        assert!(resolved.is_some())
+    }
+
+    #[test]
+    fn resolves_factory_generated_from_default() {
+        let mut container = Container::new();
+        container.register_default::<String>();
+
+        let resolved = container.resolve::<Box<dyn Fn() -> String>>();
         assert!(resolved.is_some())
     }
 
