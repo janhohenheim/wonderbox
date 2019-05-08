@@ -1,11 +1,11 @@
-use wonderbox::{register, resolve_dependencies, Container};
+use wonderbox::{autoresolvable, register_autoresolvable, Container};
 
 #[derive(Debug, Default)]
 struct Foo {
     stored_string: String,
 }
 
-#[resolve_dependencies]
+#[autoresolvable]
 impl Foo {
     fn new(stored_string: String) -> Self {
         Self { stored_string }
@@ -16,8 +16,8 @@ impl Foo {
 #[allow(clippy::blacklisted_name)]
 fn test() {
     let mut container = Container::new();
-    container.register_clone("foo".to_string());
-    register!(container, Foo);
+    container.register(|_| "foo".to_string());
+    register_autoresolvable!(container, Foo);
 
     let foo = container.resolve::<Foo>();
     assert!(foo.is_some())

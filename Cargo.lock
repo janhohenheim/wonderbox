@@ -33,7 +33,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "wonderbox"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "wonderbox-codegen 0.1.0",
 ]

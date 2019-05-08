@@ -1,9 +1,9 @@
-use wonderbox::{resolve_dependencies, Container};
+use wonderbox::{autoresolvable, Container};
 
 #[derive(Debug, Default)]
 struct Foo;
 
-#[resolve_dependencies]
+#[autoresolvable]
 impl Foo {
     fn new() -> Self {
         Foo::default()
@@ -14,7 +14,7 @@ impl Foo {
 #[allow(clippy::blacklisted_name)]
 fn test() {
     let mut container = Container::new();
-    container.register_autoresolved(Option::<Foo>::unwrap);
+    container.register_autoresolvable(Option::<Foo>::unwrap);
 
     let foo_factory = container.resolve::<Box<dyn Fn() -> Foo>>();
     assert!(foo_factory.is_some());

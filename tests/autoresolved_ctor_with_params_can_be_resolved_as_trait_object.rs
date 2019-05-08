@@ -1,4 +1,4 @@
-use wonderbox::{resolve_dependencies, Container};
+use wonderbox::{autoresolvable, Container};
 
 trait Foo {}
 
@@ -7,7 +7,7 @@ struct FooImpl {
     stored_string: String,
 }
 
-#[resolve_dependencies]
+#[autoresolvable]
 impl FooImpl {
     fn new(stored_string: String) -> Self {
         Self { stored_string }
@@ -20,8 +20,9 @@ impl Foo for FooImpl {}
 #[allow(clippy::blacklisted_name)]
 fn test() {
     let mut container = Container::new();
-    container.register_clone("foo".to_string());
-    container.register_autoresolved(|foo: Option<FooImpl>| Box::new(foo.unwrap()) as Box<dyn Foo>);
+    container.register(|_| "foo".to_string());
+    container
+        .register_autoresolvable(|foo: Option<FooImpl>| Box::new(foo.unwrap()) as Box<dyn Foo>);
 
     let foo = container.resolve::<Box<dyn Foo>>();
     assert!(foo.is_some())

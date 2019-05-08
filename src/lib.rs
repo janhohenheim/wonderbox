@@ -2,7 +2,7 @@
 //!
 //! # Examples
 //! ```
-//! use wonderbox::{register, resolve_dependencies, Container};
+//! use wonderbox::{autoresolvable, register_autoresolvable, Container};
 //!
 //! trait Foo {}
 //!
@@ -11,7 +11,7 @@
 //!     stored_string: String,
 //! }
 //!
-//! #[resolve_dependencies]
+//! #[autoresolvable]
 //! impl FooImpl {
 //!     fn new(stored_string: String) -> Self {
 //!         Self { stored_string }
@@ -21,8 +21,8 @@
 //! impl Foo for FooImpl {}
 //!
 //! let mut container = Container::new();
-//! container.register_clone("foo".to_string());
-//! register!(container, FooImpl as Box<dyn Foo>);
+//! container.register(|_| "foo".to_string());
+//! register_autoresolvable!(container, FooImpl as Box<dyn Foo>);
 //!
 //! let foo = container.resolve::<Box<dyn Foo>>();
 //! assert!(foo.is_some())
@@ -44,7 +44,7 @@
     clippy::explicit_into_iter_loop
 )]
 
-pub use wonderbox_codegen::resolve_dependencies;
+pub use wonderbox_codegen::autoresolvable;
 
 use crate::internal::AutoResolvable;
 use core::any::TypeId;
@@ -66,61 +66,6 @@ impl Container {
         Self::default()
     }
 
-    /// Register the implementation of a type that implements [`Clone`].
-    ///
-    /// # Examples
-    ///
-    /// Registering a simple type:
-    /// ```
-    /// use wonderbox::Container;
-    ///
-    /// let mut container = Container::new();
-    /// container.register_clone(String::new());
-    /// ```
-    ///
-    /// Registering a reference counted trait object:
-    /// ```
-    /// use std::sync::{Arc, Mutex};
-    /// use wonderbox::Container;
-    ///
-    /// let mut container = Container::new();
-    /// container.register_clone(Arc::new(Mutex::new(FooImpl)));
-    ///
-    /// trait Foo {}
-    /// struct FooImpl;
-    /// impl Foo for FooImpl {}
-    /// ```
-    ///
-    /// [`Clone`]: https://doc.rust-lang.org/std/clone/trait.Clone.html
-    pub fn register_clone<T>(&mut self, implementation: T) -> &mut Self
-    where
-        T: 'static + Send + Sync + Clone,
-    {
-        self.register_factory(move |_| implementation.clone());
-        self
-    }
-
-    /// Register a type by its [`Default`] implementation.
-    ///
-    /// # Examples
-    /// ```
-    /// use wonderbox::Container;
-    ///
-    /// let mut container = Container::new();
-    /// container.register_default::<String>();
-    ///
-    /// let resolved = container.resolve::<String>();
-    /// assert!(resolved.is_some())
-    /// ```
-    /// [`Default`]: https://doc.rust-lang.org/std/default/trait.Default.html
-    pub fn register_default<T>(&mut self) -> &mut Self
-    where
-        T: 'static + Default,
-    {
-        self.register_factory(|_| T::default());
-        self
-    }
-
     /// Register a function that returns the implementation of a type.
     /// Can be used to resolve dependencies.
     ///
@@ -131,7 +76,7 @@ impl Container {
     /// use wonderbox::Container;
     ///
     /// let mut container = Container::new();
-    /// container.register_factory(|_| String::new());
+    /// container.register(|_| String::new());
     /// ```
     ///
     /// Registering a factory for a trait object with dependencies:
@@ -140,9 +85,8 @@ impl Container {
     /// use wonderbox::Container;
     ///
     /// let mut container = Container::new();
-    /// let dependency = "I'm a dependency".to_string();
-    /// container.register_clone(dependency);
-    /// container.register_factory(|container| {
+    /// container.register(|_| "I'm a dependency".to_string());
+    /// container.register(|container| {
     ///     let dependency = container.resolve::<String>().unwrap();
     ///     let registered_type = FooImpl {
     ///         stored_string: dependency,
@@ -158,7 +102,7 @@ impl Container {
     /// ```
     ///
     /// [`Clone`]: https://doc.rust-lang.org/std/clone/trait.Clone.html
-    pub fn register_factory<T>(
+    pub fn register<T>(
         &mut self,
         implementation_factory: impl Fn(&Container) -> T + 'static + Send + Sync + Clone,
     ) -> &mut Self
@@ -191,13 +135,13 @@ impl Container {
     }
 
     /// Register a type while automatically resolving its dependencies.
-    /// Only works with types which have an `#[resolve_dependencies] attribute on an `Impl` containing constructors.`
+    /// Only works with types which have an `#[autoresolvable] attribute on an `Impl` containing constructors.`
     ///
-    /// For most registrations it will be easier to use the convenience macro [`register!`].
+    /// For most registrations it will be easier to use the convenience macro [`register_autoresolvable!`].
     ///
     /// # Examples
     /// ```
-    /// use wonderbox::{resolve_dependencies, Container};
+    /// use wonderbox::{autoresolvable, register_autoresolvable, Container};
     ///
     /// trait Foo {}
     ///
@@ -206,7 +150,7 @@ impl Container {
     ///     stored_string: String,
     /// }
     ///
-    /// #[resolve_dependencies]
+    /// #[autoresolvable]
     /// impl FooImpl {
     ///     fn new(stored_string: String) -> Self {
     ///         Self { stored_string }
@@ -216,13 +160,17 @@ impl Container {
     /// impl Foo for FooImpl {}
     ///
     /// let mut container = Container::new();
-    /// container.register_clone("foo".to_string());
-    /// container.register_autoresolved(|foo: Option<FooImpl>| Box::new(foo.unwrap()) as Box<dyn Foo>);
+    /// container.register(|_| "foo".to_string());
+    ///
+    /// // The following two calls are equivalent
+    /// container
+    ///     .register_autoresolvable(|foo: Option<FooImpl>| Box::new(foo.unwrap()) as Box<dyn Foo>);
+    /// register_autoresolvable!(container, FooImpl as Box<dyn Foo>);
     ///
     /// let foo = container.resolve::<Box<dyn Foo>>();
     /// assert!(foo.is_some())
     /// ```
-    pub fn register_autoresolved<ResolvedType, RegisteredType>(
+    pub fn register_autoresolvable<ResolvedType, RegisteredType>(
         &mut self,
         registration_fn: impl Fn(Option<ResolvedType>) -> RegisteredType + 'static + Send + Sync + Clone,
     ) -> &mut Self
@@ -230,7 +178,7 @@ impl Container {
         ResolvedType: AutoResolvable,
         RegisteredType: 'static,
     {
-        self.register_factory(move |container| registration_fn(ResolvedType::resolve(container)));
+        self.register(move |container| registration_fn(ResolvedType::resolve(container)));
         self
     }
 
@@ -240,10 +188,10 @@ impl Container {
     /// use wonderbox::Container;
     ///
     /// let mut first_container = Container::new();
-    /// first_container.register_clone("foo".to_string());
+    /// first_container.register(|_| "foo".to_string());
     ///
     /// let mut second_container = Container::new();
-    /// second_container.register_factory(|container| {
+    /// second_container.register(|container| {
     ///     let dependency = container.resolve::<String>().unwrap();
     ///     let foo = FooImpl {
     ///         stored_string: dependency,
@@ -251,7 +199,7 @@ impl Container {
     ///     Box::new(foo) as Box<dyn Foo>
     /// });
     ///
-    /// first_container.register_container(second_container);
+    /// first_container.extend(second_container);
     ///
     /// trait Foo {}
     /// struct FooImpl {
@@ -259,7 +207,7 @@ impl Container {
     /// }
     /// impl Foo for FooImpl {}
     /// ```
-    pub fn register_container(&mut self, container: Container) -> &mut Self {
+    pub fn extend(&mut self, container: Container) -> &mut Self {
         self.registered_types
             .extend(container.registered_types.into_iter());
         self
@@ -274,7 +222,7 @@ impl Container {
     /// use wonderbox::Container;
     ///
     /// let mut container = Container::new();
-    /// container.register_clone(String::new());
+    /// container.register(|_| "some dependency".to_string());
     ///
     /// let resolved = container.resolve::<String>();
     /// assert!(resolved.is_some())
@@ -286,8 +234,8 @@ impl Container {
     ///
     /// let mut container = Container::new();
     ///
-    /// container.register_clone("foo".to_string());
-    /// container.register_factory(|container| {
+    /// container.register(|_| "foo".to_string());
+    /// container.register(|container| {
     ///     let dependency = container.resolve::<String>().unwrap();
     ///     let foo = FooImpl {
     ///         stored_string: dependency,
@@ -324,12 +272,12 @@ impl Container {
     }
 }
 
-/// Primary way to register types annotated with `#[resolve_dependencies]`.
-/// This macro is syntax sugar over [`register_autoresolved`]
+/// Primary way to register types annotated with `#[autoresolvable]`.
+/// This macro is syntax sugar over [`register_autoresolvable`]
 ///
 /// # Examples
 /// ```
-/// use wonderbox::{register, resolve_dependencies, Container};
+/// use wonderbox::{autoresolvable, register_autoresolvable, Container};
 ///
 /// trait Foo {}
 ///
@@ -338,7 +286,7 @@ impl Container {
 ///     stored_string: String,
 /// }
 ///
-/// #[resolve_dependencies]
+/// #[autoresolvable]
 /// impl FooImpl {
 ///     fn new(stored_string: String) -> Self {
 ///         Self { stored_string }
@@ -348,22 +296,22 @@ impl Container {
 /// impl Foo for FooImpl {}
 ///
 /// let mut container = Container::new();
-/// container.register_clone("foo".to_string());
-/// register!(container, FooImpl as Box<dyn Foo>);
+/// container.register(|_| "foo".to_string());
+/// register_autoresolvable!(container, FooImpl as Box<dyn Foo>);
 ///
 /// let foo = container.resolve::<Box<dyn Foo>>();
 /// assert!(foo.is_some())
 /// ```
 #[macro_export]
-macro_rules! register {
+macro_rules! register_autoresolvable {
     ($container: ident, $implementation: ty) => {
-        $container.register_autoresolved(|implementation: Option<$implementation>| {
+        $container.register_autoresolvable(|implementation: Option<$implementation>| {
             implementation.unwrap()
         })
     };
-    ($container: ident, $implementation: ty as Box<$registration: ty>) => {
-        $container.register_autoresolved(|implementation: Option<$implementation>| {
-            Box::new(implementation.unwrap()) as Box<$registration>
+    ($container: ident, $implementation: ty as $outer_type:tt <$inner_type: ty>) => {
+        $container.register_autoresolvable(|implementation: Option<$implementation>| {
+            $outer_type::new(implementation.unwrap()) as $outer_type<$inner_type>
         })
     };
 }
@@ -386,7 +334,6 @@ pub mod internal {
 mod tests {
     use super::*;
     use std::rc::Rc;
-    use std::sync::Mutex;
 
     #[test]
     fn resolves_none_when_not_registered() {
@@ -396,57 +343,10 @@ mod tests {
     }
 
     #[test]
-    fn resolves_string() {
-        let mut container = Container::new();
-        container.register_clone(String::new());
-
-        let resolved = container.resolve::<String>();
-        assert!(resolved.is_some())
-    }
-
-    #[test]
-    fn resolves_default() {
-        let mut container = Container::new();
-        container.register_default::<String>();
-
-        let resolved = container.resolve::<String>();
-        assert!(resolved.is_some())
-    }
-
-    #[test]
-    fn resolves_factory_generated_from_default() {
-        let mut container = Container::new();
-        container.register_default::<String>();
-
-        let resolved = container.resolve::<Box<dyn Fn() -> String>>();
-        assert!(resolved.is_some())
-    }
-
-    #[test]
-    fn resolves_rc_of_trait_object() {
-        let mut container = Container::new();
-        container
-            .register_clone(Arc::new(Mutex::new(FooImpl::new())) as Arc<Mutex<dyn Foo + Send>>);
-
-        let resolved = container.resolve::<Arc<Mutex<dyn Foo + Send>>>();
-        assert!(resolved.is_some())
-    }
-
-    #[test]
-    fn generates_factory_of_rc_of_trait_object() {
-        let mut container = Container::new();
-        container
-            .register_clone(Arc::new(Mutex::new(FooImpl::new())) as Arc<Mutex<dyn Foo + Send>>);
-
-        let resolved = container.resolve::<Box<dyn Fn() -> Arc<Mutex<dyn Foo + Send>>>>();
-        assert!(resolved.is_some())
-    }
-
-    #[test]
     fn resolves_factory_of_rc_of_trait_object() {
         let mut container = Container::new();
         let factory = |_container: &Container| Rc::new(FooImpl::new()) as Rc<dyn Foo>;
-        container.register_factory(factory);
+        container.register(factory);
 
         let resolved = container.resolve::<Rc<dyn Foo>>();
         assert!(resolved.is_some())
@@ -456,7 +356,7 @@ mod tests {
     fn resolves_factory_of_box_of_trait_object() {
         let mut container = Container::new();
         let factory = |_container: &Container| Box::new(FooImpl::new()) as Box<dyn Foo>;
-        container.register_factory(factory);
+        container.register(factory);
 
         let resolved = container.resolve::<Box<dyn Foo>>();
         assert!(resolved.is_some())
@@ -467,7 +367,7 @@ mod tests {
         let mut container = Container::new();
         let factory = |_container: &Container| Box::new(FooImpl::new()) as Box<dyn Foo>;
         let boxed_factory = Box::new(factory);
-        container.register_factory(boxed_factory);
+        container.register(boxed_factory);
 
         let resolved = container.resolve::<Box<dyn Foo>>();
         assert!(resolved.is_some())
@@ -477,8 +377,8 @@ mod tests {
     fn resolves_boxed_factory_with_clone_dependency() {
         let mut container = Container::new();
 
-        container.register_clone("foo".to_string());
-        container.register_factory(|container| {
+        container.register(|_| "foo".to_string());
+        container.register(|container| {
             let dependency = container.resolve::<String>().unwrap();
             let bar = BarImpl::new(dependency);
             Box::new(bar) as Box<dyn Bar>
@@ -492,10 +392,9 @@ mod tests {
     fn resolves_boxed_factory_with_factory_dependency() {
         let mut container = Container::new();
 
-        container.register_clone("foo".to_string());
-        container
-            .register_factory(|_container: &Container| Box::new(FooImpl::new()) as Box<dyn Foo>);
-        container.register_factory(|container| {
+        container.register(|_| "foo".to_string());
+        container.register(|_container: &Container| Box::new(FooImpl::new()) as Box<dyn Foo>);
+        container.register(|container| {
             let clone_dependency = container.resolve::<String>().unwrap();
             let _factory_dependency = container.resolve::<Box<dyn Foo>>().unwrap();
 
@@ -511,10 +410,9 @@ mod tests {
     fn generates_factory_from_type_with_dependency() {
         let mut container = Container::new();
 
-        container.register_clone("foo".to_string());
-        container
-            .register_factory(|_container: &Container| Box::new(FooImpl::new()) as Box<dyn Foo>);
-        container.register_factory(|container| {
+        container.register(|_| "foo".to_string());
+        container.register(|_container: &Container| Box::new(FooImpl::new()) as Box<dyn Foo>);
+        container.register(|container| {
             let clone_dependency = container.resolve::<String>().unwrap();
             let _factory_dependency = container.resolve::<Box<dyn Foo>>().unwrap();
 
@@ -529,16 +427,16 @@ mod tests {
     #[test]
     fn resolves_type_from_merged_containers() {
         let mut first_container = Container::new();
-        first_container.register_clone("foo".to_string());
+        first_container.register(|_| "foo".to_string());
 
         let mut second_container = Container::new();
-        second_container.register_factory(|container| {
+        second_container.register(|container| {
             let dependency = container.resolve::<String>().unwrap();
             let bar = BarImpl::new(dependency);
             Box::new(bar) as Box<dyn Bar>
         });
 
-        first_container.register_container(second_container);
+        first_container.extend(second_container);
 
         let resolved = first_container.resolve::<Box<dyn Bar>>();
         assert!(resolved.is_some())
