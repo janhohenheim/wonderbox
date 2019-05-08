@@ -8,7 +8,7 @@
 
 - Store factories as `Send + Sync`
 
-## To be released
+## 0.3.0
 
 - Cleanup API
     - Remove `register_clone` and `register_default` from API
