@@ -481,7 +481,7 @@ mod tests {
         container
             .register_clone(Arc::new(Mutex::new(FooImpl::new())) as Arc<Mutex<dyn Foo + Send>>);
 
-        let resolved = container.resolve::<Arc<Mutex<dyn Foo>>>();
+        let resolved = container.resolve::<Arc<Mutex<dyn Foo + Send>>>();
         assert!(resolved.is_some())
     }
 
@@ -491,7 +491,7 @@ mod tests {
         container
             .register_clone(Arc::new(Mutex::new(FooImpl::new())) as Arc<Mutex<dyn Foo + Send>>);
 
-        let resolved = container.resolve::<Box<dyn Fn() -> Arc<Mutex<dyn Foo>>>>();
+        let resolved = container.resolve::<Box<dyn Fn() -> Arc<Mutex<dyn Foo + Send>>>>();
         assert!(resolved.is_some())
     }
 
