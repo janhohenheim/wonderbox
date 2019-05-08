@@ -66,61 +66,6 @@ impl Container {
         Self::default()
     }
 
-    /// Register the implementation of a type that implements [`Clone`].
-    ///
-    /// # Examples
-    ///
-    /// Registering a simple type:
-    /// ```
-    /// use wonderbox::Container;
-    ///
-    /// let mut container = Container::new();
-    /// container.register_clone(String::new());
-    /// ```
-    ///
-    /// Registering a reference counted trait object:
-    /// ```
-    /// use std::sync::{Arc, Mutex};
-    /// use wonderbox::Container;
-    ///
-    /// let mut container = Container::new();
-    /// container.register_clone(Arc::new(Mutex::new(FooImpl)));
-    ///
-    /// trait Foo {}
-    /// struct FooImpl;
-    /// impl Foo for FooImpl {}
-    /// ```
-    ///
-    /// [`Clone`]: https://doc.rust-lang.org/std/clone/trait.Clone.html
-    pub fn register_clone<T>(&mut self, implementation: T) -> &mut Self
-    where
-        T: 'static + Send + Sync + Clone,
-    {
-        self.register_factory(move |_| implementation.clone());
-        self
-    }
-
-    /// Register a type by its [`Default`] implementation.
-    ///
-    /// # Examples
-    /// ```
-    /// use wonderbox::Container;
-    ///
-    /// let mut container = Container::new();
-    /// container.register_default::<String>();
-    ///
-    /// let resolved = container.resolve::<String>();
-    /// assert!(resolved.is_some())
-    /// ```
-    /// [`Default`]: https://doc.rust-lang.org/std/default/trait.Default.html
-    pub fn register_default<T>(&mut self) -> &mut Self
-    where
-        T: 'static + Default,
-    {
-        self.register_factory(|_| T::default());
-        self
-    }
-
     /// Register a function that returns the implementation of a type.
     /// Can be used to resolve dependencies.
     ///
