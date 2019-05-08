@@ -147,7 +147,7 @@ impl Container {
 
         let partially_applied_implementation_factory: Box<
             ImplementationFactory<Box<dyn Fn() -> T>>,
-        > = Box::new(|_container: &Container| Box::new(|| T::default()));
+        > = Box::new(|_container: &Container| Box::new(T::default));
 
         self.registered_types.insert(
             TypeId::of::<Box<dyn Fn() -> T>>(),
@@ -454,6 +454,7 @@ pub mod internal {
 }
 
 #[cfg(test)]
+#[allow(clippy::blacklisted_name)]
 mod tests {
     use super::*;
     use std::rc::Rc;
