@@ -35,12 +35,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "wonderbox"
 version = "0.3.0"
 dependencies = [
- "wonderbox-codegen 0.1.0",
+ "wonderbox-codegen 0.3.0",
 ]
 
 [[package]]
 name = "wonderbox-codegen"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "proc-macro2 0.4.29 (registry+https://github.com/rust-lang/crates.io-index)",
  "quote 0.6.12 (registry+https://github.com/rust-lang/crates.io-index)",
