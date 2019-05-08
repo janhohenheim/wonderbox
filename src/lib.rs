@@ -231,23 +231,7 @@ impl Container {
         ResolvedType: AutoResolvable,
         RegisteredType: 'static,
     {
-        let implementation_factory: Box<ImplementationFactory<RegisteredType>> = {
-            let registration_fn = registration_fn.clone();
-            Box::new(move |container| registration_fn(ResolvedType::resolve(container)))
-        };
-        self.registered_types.insert(
-            TypeId::of::<RegisteredType>(),
-            Arc::new(implementation_factory),
-        );
-
-        let partially_applied_implementation_factory =
-            partially_apply_implementation_factory(registration_fn);
-
-        self.registered_types.insert(
-            TypeId::of::<Box<dyn Fn() -> RegisteredType>>(),
-            Arc::new(partially_applied_implementation_factory),
-        );
-
+        self.register_factory(move |container| registration_fn(ResolvedType::resolve(container)));
         self
     }
 
@@ -380,20 +364,6 @@ macro_rules! register {
             Box::new(implementation.unwrap()) as Box<$registration>
         })
     };
-}
-
-fn partially_apply_implementation_factory<ResolvedType, RegisteredType>(
-    registration_fn: impl Fn(Option<ResolvedType>) -> RegisteredType + 'static + Send + Sync + Clone,
-) -> Box<ImplementationFactory<Box<dyn Fn() -> RegisteredType + Send + Sync>>>
-where
-    ResolvedType: AutoResolvable,
-    RegisteredType: 'static,
-{
-    Box::new(move |container| {
-        let registration_fn = registration_fn.clone();
-        let container = container.clone();
-        Box::new(move || registration_fn(ResolvedType::resolve(&container)))
-    })
 }
 
 fn type_name<T>() -> &'static str {
