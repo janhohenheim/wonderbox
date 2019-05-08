@@ -3,7 +3,7 @@ name = "wonderbox"
 description = """
 A minimalistic IoC library.
 """
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Jan Nils Ferner <jn_ferner@hotmail.de>"]
 repository = "https://github.com/jnferner/wonderbox"
 homepage = "https://github.com/jnferner/wonderbox"
