@@ -1,9 +1,9 @@
-use wonderbox::{resolve_dependencies, Container};
+use wonderbox::{autoresolvable, Container};
 
 #[derive(Debug, Default)]
 struct Foo;
 
-#[resolve_dependencies]
+#[autoresolvable]
 impl Foo {
     fn new() -> Self {
         Foo::default()

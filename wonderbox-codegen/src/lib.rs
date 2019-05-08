@@ -15,7 +15,7 @@ use syn::{
 type Result<T> = std::result::Result<T, Diagnostic>;
 
 #[proc_macro_attribute]
-pub fn resolve_dependencies(attr: TokenStream, item: TokenStream) -> TokenStream {
+pub fn autoresolvable(attr: TokenStream, item: TokenStream) -> TokenStream {
     let item = parse_macro_input!(item as Item);
     let _attr = parse_macro_input!(attr as AttributeArgs);
 
@@ -185,4 +185,4 @@ fn generate_self_type() -> Type {
     }
 }
 
-const ATTRIBUTE_NAME: &str = "#[resolve_dependencies]";
+const ATTRIBUTE_NAME: &str = "#[autoresolvable]";

@@ -1,11 +1,11 @@
-use wonderbox::{resolve_dependencies, Container};
+use wonderbox::{autoresolvable, Container};
 
 #[derive(Debug, Default)]
 struct Foo {
     stored_string: String,
 }
 
-#[resolve_dependencies]
+#[autoresolvable]
 impl Foo {
     fn new(stored_string: String) -> Self {
         Self { stored_string }

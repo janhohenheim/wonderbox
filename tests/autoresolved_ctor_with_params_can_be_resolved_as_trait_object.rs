@@ -1,4 +1,4 @@
-use wonderbox::{resolve_dependencies, Container};
+use wonderbox::{autoresolvable, Container};
 
 trait Foo {}
 
@@ -7,7 +7,7 @@ struct FooImpl {
     stored_string: String,
 }
 
-#[resolve_dependencies]
+#[autoresolvable]
 impl FooImpl {
     fn new(stored_string: String) -> Self {
         Self { stored_string }

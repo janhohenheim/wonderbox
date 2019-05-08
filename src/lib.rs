@@ -2,7 +2,7 @@
 //!
 //! # Examples
 //! ```
-//! use wonderbox::{register, resolve_dependencies, Container};
+//! use wonderbox::{autoresolvable, register_autoresolvable, Container};
 //!
 //! trait Foo {}
 //!
@@ -11,7 +11,7 @@
 //!     stored_string: String,
 //! }
 //!
-//! #[resolve_dependencies]
+//! #[autoresolvable]
 //! impl FooImpl {
 //!     fn new(stored_string: String) -> Self {
 //!         Self { stored_string }
@@ -22,7 +22,7 @@
 //!
 //! let mut container = Container::new();
 //! container.register(|_| "foo".to_string());
-//! register!(container, FooImpl as Box<dyn Foo>);
+//! register_autoresolvable!(container, FooImpl as Box<dyn Foo>);
 //!
 //! let foo = container.resolve::<Box<dyn Foo>>();
 //! assert!(foo.is_some())
@@ -44,7 +44,7 @@
     clippy::explicit_into_iter_loop
 )]
 
-pub use wonderbox_codegen::resolve_dependencies;
+pub use wonderbox_codegen::autoresolvable;
 
 use crate::internal::AutoResolvable;
 use core::any::TypeId;
@@ -135,13 +135,13 @@ impl Container {
     }
 
     /// Register a type while automatically resolving its dependencies.
-    /// Only works with types which have an `#[resolve_dependencies] attribute on an `Impl` containing constructors.`
+    /// Only works with types which have an `#[autoresolvable] attribute on an `Impl` containing constructors.`
     ///
-    /// For most registrations it will be easier to use the convenience macro [`register!`].
+    /// For most registrations it will be easier to use the convenience macro [`register_autoresolvable!`].
     ///
     /// # Examples
     /// ```
-    /// use wonderbox::{register, resolve_dependencies, Container};
+    /// use wonderbox::{autoresolvable, register_autoresolvable, Container};
     ///
     /// trait Foo {}
     ///
@@ -150,7 +150,7 @@ impl Container {
     ///     stored_string: String,
     /// }
     ///
-    /// #[resolve_dependencies]
+    /// #[autoresolvable]
     /// impl FooImpl {
     ///     fn new(stored_string: String) -> Self {
     ///         Self { stored_string }
@@ -165,7 +165,7 @@ impl Container {
     /// // The following two calls are equivalent
     /// container
     ///     .register_autoresolvable(|foo: Option<FooImpl>| Box::new(foo.unwrap()) as Box<dyn Foo>);
-    /// register!(container, FooImpl as Box<dyn Foo>);
+    /// register_autoresolvable!(container, FooImpl as Box<dyn Foo>);
     ///
     /// let foo = container.resolve::<Box<dyn Foo>>();
     /// assert!(foo.is_some())
@@ -272,12 +272,12 @@ impl Container {
     }
 }
 
-/// Primary way to register types annotated with `#[resolve_dependencies]`.
+/// Primary way to register types annotated with `#[autoresolvable]`.
 /// This macro is syntax sugar over [`register_autoresolvable`]
 ///
 /// # Examples
 /// ```
-/// use wonderbox::{register, resolve_dependencies, Container};
+/// use wonderbox::{autoresolvable, register_autoresolvable, Container};
 ///
 /// trait Foo {}
 ///
@@ -286,7 +286,7 @@ impl Container {
 ///     stored_string: String,
 /// }
 ///
-/// #[resolve_dependencies]
+/// #[autoresolvable]
 /// impl FooImpl {
 ///     fn new(stored_string: String) -> Self {
 ///         Self { stored_string }
@@ -297,13 +297,13 @@ impl Container {
 ///
 /// let mut container = Container::new();
 /// container.register(|_| "foo".to_string());
-/// register!(container, FooImpl as Box<dyn Foo>);
+/// register_autoresolvable!(container, FooImpl as Box<dyn Foo>);
 ///
 /// let foo = container.resolve::<Box<dyn Foo>>();
 /// assert!(foo.is_some())
 /// ```
 #[macro_export]
-macro_rules! register {
+macro_rules! register_autoresolvable {
     ($container: ident, $implementation: ty) => {
         $container.register_autoresolvable(|implementation: Option<$implementation>| {
             implementation.unwrap()

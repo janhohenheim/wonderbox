@@ -1,11 +1,11 @@
-use wonderbox::{resolve_dependencies, Container};
+use wonderbox::{autoresolvable, Container};
 
 trait Foo {}
 
 #[derive(Debug, Default)]
 struct FooImpl;
 
-#[resolve_dependencies]
+#[autoresolvable]
 impl FooImpl {
     fn new() -> Self {
         FooImpl::default()

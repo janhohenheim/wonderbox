@@ -1,4 +1,4 @@
-use wonderbox::{register, resolve_dependencies, Container};
+use wonderbox::{autoresolvable, register_autoresolvable, Container};
 
 trait Foo {}
 
@@ -7,7 +7,7 @@ struct FooImpl {
     stored_string: String,
 }
 
-#[resolve_dependencies]
+#[autoresolvable]
 impl FooImpl {
     fn new(stored_string: String) -> Self {
         Self { stored_string }
@@ -24,7 +24,7 @@ struct BarImpl {
     foo_factory: Box<dyn Fn() -> Box<dyn Foo>>,
 }
 
-#[resolve_dependencies]
+#[autoresolvable]
 impl BarImpl {
     fn new(foo_factory: Box<dyn Fn() -> Box<dyn Foo>>) -> Self {
         Self { foo_factory }
@@ -42,8 +42,8 @@ impl Bar for BarImpl {
 fn test() {
     let mut container = Container::new();
     container.register(|_| "foo".to_string());
-    register!(container, FooImpl as Box<dyn Foo>);
-    register!(container, BarImpl as Box<dyn Bar>);;
+    register_autoresolvable!(container, FooImpl as Box<dyn Foo>);
+    register_autoresolvable!(container, BarImpl as Box<dyn Bar>);;
 
     let bar = container.resolve::<Box<dyn Bar>>();
     assert!(bar.is_some());
