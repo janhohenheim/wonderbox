@@ -20,7 +20,7 @@ impl Foo for FooImpl {}
 #[allow(clippy::blacklisted_name)]
 fn test() {
     let mut container = Container::new();
-    container.register_factory(|_| "foo".to_string());
+    container.register(|_| "foo".to_string());
     register!(container, FooImpl as Box<dyn Foo>);
 
     let foo = container.resolve::<Box<dyn Foo>>();

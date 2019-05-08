@@ -21,7 +21,7 @@
 //! impl Foo for FooImpl {}
 //!
 //! let mut container = Container::new();
-//! container.register_factory(|_| "foo".to_string());
+//! container.register(|_| "foo".to_string());
 //! register!(container, FooImpl as Box<dyn Foo>);
 //!
 //! let foo = container.resolve::<Box<dyn Foo>>();
@@ -76,7 +76,7 @@ impl Container {
     /// use wonderbox::Container;
     ///
     /// let mut container = Container::new();
-    /// container.register_factory(|_| String::new());
+    /// container.register(|_| String::new());
     /// ```
     ///
     /// Registering a factory for a trait object with dependencies:
@@ -85,8 +85,8 @@ impl Container {
     /// use wonderbox::Container;
     ///
     /// let mut container = Container::new();
-    /// container.register_factory(|_| "I'm a dependency".to_string());
-    /// container.register_factory(|container| {
+    /// container.register(|_| "I'm a dependency".to_string());
+    /// container.register(|container| {
     ///     let dependency = container.resolve::<String>().unwrap();
     ///     let registered_type = FooImpl {
     ///         stored_string: dependency,
@@ -102,7 +102,7 @@ impl Container {
     /// ```
     ///
     /// [`Clone`]: https://doc.rust-lang.org/std/clone/trait.Clone.html
-    pub fn register_factory<T>(
+    pub fn register<T>(
         &mut self,
         implementation_factory: impl Fn(&Container) -> T + 'static + Send + Sync + Clone,
     ) -> &mut Self
@@ -160,7 +160,7 @@ impl Container {
     /// impl Foo for FooImpl {}
     ///
     /// let mut container = Container::new();
-    /// container.register_factory(|_| "foo".to_string());
+    /// container.register(|_| "foo".to_string());
     /// container.register_autoresolved(|foo: Option<FooImpl>| Box::new(foo.unwrap()) as Box<dyn Foo>);
     ///
     /// let foo = container.resolve::<Box<dyn Foo>>();
@@ -174,7 +174,7 @@ impl Container {
         ResolvedType: AutoResolvable,
         RegisteredType: 'static,
     {
-        self.register_factory(move |container| registration_fn(ResolvedType::resolve(container)));
+        self.register(move |container| registration_fn(ResolvedType::resolve(container)));
         self
     }
 
@@ -184,10 +184,10 @@ impl Container {
     /// use wonderbox::Container;
     ///
     /// let mut first_container = Container::new();
-    /// first_container.register_factory(|_| "foo".to_string());
+    /// first_container.register(|_| "foo".to_string());
     ///
     /// let mut second_container = Container::new();
-    /// second_container.register_factory(|container| {
+    /// second_container.register(|container| {
     ///     let dependency = container.resolve::<String>().unwrap();
     ///     let foo = FooImpl {
     ///         stored_string: dependency,
@@ -218,7 +218,7 @@ impl Container {
     /// use wonderbox::Container;
     ///
     /// let mut container = Container::new();
-    /// container.register_factory(|_| "some dependency".to_string());
+    /// container.register(|_| "some dependency".to_string());
     ///
     /// let resolved = container.resolve::<String>();
     /// assert!(resolved.is_some())
@@ -230,8 +230,8 @@ impl Container {
     ///
     /// let mut container = Container::new();
     ///
-    /// container.register_factory(|_| "foo".to_string());
-    /// container.register_factory(|container| {
+    /// container.register(|_| "foo".to_string());
+    /// container.register(|container| {
     ///     let dependency = container.resolve::<String>().unwrap();
     ///     let foo = FooImpl {
     ///         stored_string: dependency,
@@ -292,7 +292,7 @@ impl Container {
 /// impl Foo for FooImpl {}
 ///
 /// let mut container = Container::new();
-/// container.register_factory(|_| "foo".to_string());
+/// container.register(|_| "foo".to_string());
 /// register!(container, FooImpl as Box<dyn Foo>);
 ///
 /// let foo = container.resolve::<Box<dyn Foo>>();
@@ -342,7 +342,7 @@ mod tests {
     fn resolves_factory_of_rc_of_trait_object() {
         let mut container = Container::new();
         let factory = |_container: &Container| Rc::new(FooImpl::new()) as Rc<dyn Foo>;
-        container.register_factory(factory);
+        container.register(factory);
 
         let resolved = container.resolve::<Rc<dyn Foo>>();
         assert!(resolved.is_some())
@@ -352,7 +352,7 @@ mod tests {
     fn resolves_factory_of_box_of_trait_object() {
         let mut container = Container::new();
         let factory = |_container: &Container| Box::new(FooImpl::new()) as Box<dyn Foo>;
-        container.register_factory(factory);
+        container.register(factory);
 
         let resolved = container.resolve::<Box<dyn Foo>>();
         assert!(resolved.is_some())
@@ -363,7 +363,7 @@ mod tests {
         let mut container = Container::new();
         let factory = |_container: &Container| Box::new(FooImpl::new()) as Box<dyn Foo>;
         let boxed_factory = Box::new(factory);
-        container.register_factory(boxed_factory);
+        container.register(boxed_factory);
 
         let resolved = container.resolve::<Box<dyn Foo>>();
         assert!(resolved.is_some())
@@ -373,8 +373,8 @@ mod tests {
     fn resolves_boxed_factory_with_clone_dependency() {
         let mut container = Container::new();
 
-        container.register_factory(|_| "foo".to_string());
-        container.register_factory(|container| {
+        container.register(|_| "foo".to_string());
+        container.register(|container| {
             let dependency = container.resolve::<String>().unwrap();
             let bar = BarImpl::new(dependency);
             Box::new(bar) as Box<dyn Bar>
@@ -388,10 +388,9 @@ mod tests {
     fn resolves_boxed_factory_with_factory_dependency() {
         let mut container = Container::new();
 
-        container.register_factory(|_| "foo".to_string());
-        container
-            .register_factory(|_container: &Container| Box::new(FooImpl::new()) as Box<dyn Foo>);
-        container.register_factory(|container| {
+        container.register(|_| "foo".to_string());
+        container.register(|_container: &Container| Box::new(FooImpl::new()) as Box<dyn Foo>);
+        container.register(|container| {
             let clone_dependency = container.resolve::<String>().unwrap();
             let _factory_dependency = container.resolve::<Box<dyn Foo>>().unwrap();
 
@@ -407,10 +406,9 @@ mod tests {
     fn generates_factory_from_type_with_dependency() {
         let mut container = Container::new();
 
-        container.register_factory(|_| "foo".to_string());
-        container
-            .register_factory(|_container: &Container| Box::new(FooImpl::new()) as Box<dyn Foo>);
-        container.register_factory(|container| {
+        container.register(|_| "foo".to_string());
+        container.register(|_container: &Container| Box::new(FooImpl::new()) as Box<dyn Foo>);
+        container.register(|container| {
             let clone_dependency = container.resolve::<String>().unwrap();
             let _factory_dependency = container.resolve::<Box<dyn Foo>>().unwrap();
 
@@ -425,10 +423,10 @@ mod tests {
     #[test]
     fn resolves_type_from_merged_containers() {
         let mut first_container = Container::new();
-        first_container.register_factory(|_| "foo".to_string());
+        first_container.register(|_| "foo".to_string());
 
         let mut second_container = Container::new();
-        second_container.register_factory(|container| {
+        second_container.register(|container| {
             let dependency = container.resolve::<String>().unwrap();
             let bar = BarImpl::new(dependency);
             Box::new(bar) as Box<dyn Bar>
