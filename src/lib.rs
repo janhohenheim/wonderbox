@@ -195,7 +195,7 @@ impl Container {
     ///     Box::new(foo) as Box<dyn Foo>
     /// });
     ///
-    /// first_container.register_container(second_container);
+    /// first_container.extend(second_container);
     ///
     /// trait Foo {}
     /// struct FooImpl {
@@ -203,7 +203,7 @@ impl Container {
     /// }
     /// impl Foo for FooImpl {}
     /// ```
-    pub fn register_container(&mut self, container: Container) -> &mut Self {
+    pub fn extend(&mut self, container: Container) -> &mut Self {
         self.registered_types
             .extend(container.registered_types.into_iter());
         self
@@ -432,7 +432,7 @@ mod tests {
             Box::new(bar) as Box<dyn Bar>
         });
 
-        first_container.register_container(second_container);
+        first_container.extend(second_container);
 
         let resolved = first_container.resolve::<Box<dyn Bar>>();
         assert!(resolved.is_some())
