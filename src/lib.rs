@@ -120,20 +120,7 @@ impl Container {
     where
         T: 'static + Default,
     {
-        let implementation_factory: Box<ImplementationFactory<T>> =
-            { Box::new(|_container: &Container| T::default()) };
-        self.registered_types
-            .insert(TypeId::of::<T>(), Arc::new(implementation_factory));
-
-        let partially_applied_implementation_factory: Box<
-            ImplementationFactory<Box<dyn Fn() -> T>>,
-        > = Box::new(|_container: &Container| Box::new(|| T::default()));
-
-        self.registered_types.insert(
-            TypeId::of::<Box<dyn Fn() -> T>>(),
-            Arc::new(partially_applied_implementation_factory),
-        );
-
+        self.register_factory(|_| T::default());
         self
     }
 
