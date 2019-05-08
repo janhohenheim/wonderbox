@@ -17,7 +17,7 @@ impl Foo {
 fn test() {
     let mut container = Container::new();
     container.register(|_| "foo".to_string());
-    container.register_autoresolved(Option::<Foo>::unwrap);
+    container.register_autoresolvable(Option::<Foo>::unwrap);
 
     let foo = container.resolve::<Foo>();
     assert!(foo.is_some())

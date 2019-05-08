@@ -161,12 +161,13 @@ impl Container {
     ///
     /// let mut container = Container::new();
     /// container.register(|_| "foo".to_string());
-    /// container.register_autoresolved(|foo: Option<FooImpl>| Box::new(foo.unwrap()) as Box<dyn Foo>);
+    /// container
+    ///     .register_autoresolvable(|foo: Option<FooImpl>| Box::new(foo.unwrap()) as Box<dyn Foo>);
     ///
     /// let foo = container.resolve::<Box<dyn Foo>>();
     /// assert!(foo.is_some())
     /// ```
-    pub fn register_autoresolved<ResolvedType, RegisteredType>(
+    pub fn register_autoresolvable<ResolvedType, RegisteredType>(
         &mut self,
         registration_fn: impl Fn(Option<ResolvedType>) -> RegisteredType + 'static + Send + Sync + Clone,
     ) -> &mut Self
@@ -269,7 +270,7 @@ impl Container {
 }
 
 /// Primary way to register types annotated with `#[resolve_dependencies]`.
-/// This macro is syntax sugar over [`register_autoresolved`]
+/// This macro is syntax sugar over [`register_autoresolvable`]
 ///
 /// # Examples
 /// ```
@@ -301,12 +302,12 @@ impl Container {
 #[macro_export]
 macro_rules! register {
     ($container: ident, $implementation: ty) => {
-        $container.register_autoresolved(|implementation: Option<$implementation>| {
+        $container.register_autoresolvable(|implementation: Option<$implementation>| {
             implementation.unwrap()
         })
     };
     ($container: ident, $implementation: ty as Box<$registration: ty>) => {
-        $container.register_autoresolved(|implementation: Option<$implementation>| {
+        $container.register_autoresolvable(|implementation: Option<$implementation>| {
             Box::new(implementation.unwrap()) as Box<$registration>
         })
     };
