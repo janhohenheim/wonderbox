@@ -309,9 +309,9 @@ macro_rules! register {
             implementation.unwrap()
         })
     };
-    ($container: ident, $implementation: ty as Box<$registration: ty>) => {
+    ($container: ident, $implementation: ty as $outer_type:tt <$inner_type: ty>) => {
         $container.register_autoresolvable(|implementation: Option<$implementation>| {
-            Box::new(implementation.unwrap()) as Box<$registration>
+            Box::new(implementation.unwrap()) as $outer_type<$inner_type>
         })
     };
 }
