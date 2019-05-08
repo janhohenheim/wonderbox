@@ -1,5 +1,10 @@
 # Wonderbox
 
+[![Build Status](https://travis-ci.com/jnferner/wonderbox.svg?branch=master)](https://travis-ci.com/jnferner/wonderbox)
+[![Latest Version](https://img.shields.io/crates/v/wonderbox.svg)](https://crates.io/crates/wonderbox)
+[![Documentation](https://docs.rs/wonderbox/badge.svg)](https://docs.rs/wonderbox)
+
+
 A minimalistic [IoC](https://en.wikipedia.org/wiki/Inversion_of_control) library.
 
 ## Examples
