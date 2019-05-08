@@ -141,7 +141,7 @@ impl Container {
     ///
     /// # Examples
     /// ```
-    /// use wonderbox::{resolve_dependencies, Container};
+    /// use wonderbox::{register, resolve_dependencies, Container};
     ///
     /// trait Foo {}
     ///
@@ -161,8 +161,11 @@ impl Container {
     ///
     /// let mut container = Container::new();
     /// container.register(|_| "foo".to_string());
+    ///
+    /// // The following two calls are equivalent
     /// container
     ///     .register_autoresolvable(|foo: Option<FooImpl>| Box::new(foo.unwrap()) as Box<dyn Foo>);
+    /// register!(container, FooImpl as Box<dyn Foo>);
     ///
     /// let foo = container.resolve::<Box<dyn Foo>>();
     /// assert!(foo.is_some())
