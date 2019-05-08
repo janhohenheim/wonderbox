@@ -161,12 +161,11 @@ impl Container {
     /// [`Clone`]: https://doc.rust-lang.org/std/clone/trait.Clone.html
     pub fn register_factory<T>(
         &mut self,
-        implementation_factory: impl Fn(&Container) -> T + 'static + Send + Sync,
+        implementation_factory: impl Fn(&Container) -> T + 'static + Send + Sync + Clone,
     ) -> &mut Self
     where
         T: 'static,
     {
-        let implementation_factory = Arc::new(implementation_factory);
         let registered_implementation_factory: Box<ImplementationFactory<T>> = {
             let implementation_factory = implementation_factory.clone();
             Box::new(move |container| implementation_factory(container))
