@@ -10,8 +10,7 @@ A minimalistic [IoC](https://en.wikipedia.org/wiki/Inversion_of_control) library
 ## Examples
 
 ```rust
-use wonderbox::{register, Container};
-use wonderbox_codegen::resolve_dependencies;
+use wonderbox::{register, Container, resolve_dependencies};
 
 trait Foo {}
 

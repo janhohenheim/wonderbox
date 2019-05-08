@@ -50,15 +50,15 @@ use crate::internal::AutoResolvable;
 use core::any::TypeId;
 use std::any::Any;
 use std::collections::HashMap;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 
 /// The IoC container
 #[derive(Default, Debug, Clone)]
 pub struct Container {
-    registered_types: HashMap<TypeId, Arc<RwLock<dyn Any>>>,
+    registered_types: HashMap<TypeId, Arc<dyn Any + Send + Sync>>,
 }
 
-type ImplementationFactory<T> = dyn Fn(&Container) -> T;
+type ImplementationFactory<T> = dyn Fn(&Container) -> T + Send + Sync;
 
 impl Container {
     /// Create a new empty [`Container`].
@@ -78,13 +78,13 @@ impl Container {
     /// container.register_clone(String::new());
     /// ```
     ///
-    /// Registering an Rc of a trait object type:
+    /// Registering a reference counted trait object:
     /// ```
-    /// use std::rc::Rc;
+    /// use std::sync::{Arc, Mutex};
     /// use wonderbox::Container;
     ///
     /// let mut container = Container::new();
-    /// container.register_clone(Rc::new(FooImpl) as Rc<dyn Foo>);
+    /// container.register_clone(Arc::new(Mutex::new(FooImpl)));
     ///
     /// trait Foo {}
     /// struct FooImpl;
@@ -94,30 +94,9 @@ impl Container {
     /// [`Clone`]: https://doc.rust-lang.org/std/clone/trait.Clone.html
     pub fn register_clone<T>(&mut self, implementation: T) -> &mut Self
     where
-        T: 'static + Clone,
+        T: 'static + Send + Sync + Clone,
     {
-        println!("Registering type {}", type_name::<T>());
-        let implementation_factory: Box<ImplementationFactory<T>> = {
-            let implementation = implementation.clone();
-            Box::new(move |_container: &Container| implementation.clone())
-        };
-        self.registered_types.insert(
-            TypeId::of::<T>(),
-            Arc::new(RwLock::new(implementation_factory)),
-        );
-
-        let partially_applied_implementation_factory: Box<
-            ImplementationFactory<Box<dyn Fn() -> T>>,
-        > = Box::new(move |_container: &Container| {
-            let implementation = implementation.clone();
-            Box::new(move || implementation.clone())
-        });
-
-        self.registered_types.insert(
-            TypeId::of::<Box<dyn Fn() -> T>>(),
-            Arc::new(RwLock::new(partially_applied_implementation_factory)),
-        );
-
+        self.register_factory(move |_| implementation.clone());
         self
     }
 
@@ -138,22 +117,7 @@ impl Container {
     where
         T: 'static + Default,
     {
-        let implementation_factory: Box<ImplementationFactory<T>> =
-            { Box::new(|_container: &Container| T::default()) };
-        self.registered_types.insert(
-            TypeId::of::<T>(),
-            Arc::new(RwLock::new(implementation_factory)),
-        );
-
-        let partially_applied_implementation_factory: Box<
-            ImplementationFactory<Box<dyn Fn() -> T>>,
-        > = Box::new(|_container: &Container| Box::new(T::default));
-
-        self.registered_types.insert(
-            TypeId::of::<Box<dyn Fn() -> T>>(),
-            Arc::new(RwLock::new(partially_applied_implementation_factory)),
-        );
-
+        self.register_factory(|_| T::default());
         self
     }
 
@@ -196,19 +160,18 @@ impl Container {
     /// [`Clone`]: https://doc.rust-lang.org/std/clone/trait.Clone.html
     pub fn register_factory<T>(
         &mut self,
-        implementation_factory: impl Fn(&Container) -> T + 'static,
+        implementation_factory: impl Fn(&Container) -> T + 'static + Send + Sync + Clone,
     ) -> &mut Self
     where
         T: 'static,
     {
-        let implementation_factory = Arc::new(implementation_factory);
         let registered_implementation_factory: Box<ImplementationFactory<T>> = {
             let implementation_factory = implementation_factory.clone();
             Box::new(move |container| implementation_factory(container))
         };
         self.registered_types.insert(
             TypeId::of::<T>(),
-            Arc::new(RwLock::new(registered_implementation_factory)),
+            Arc::new(registered_implementation_factory),
         );
 
         let partially_applied_implementation_factory: Box<
@@ -221,7 +184,7 @@ impl Container {
 
         self.registered_types.insert(
             TypeId::of::<Box<dyn Fn() -> T>>(),
-            Arc::new(RwLock::new(partially_applied_implementation_factory)),
+            Arc::new(partially_applied_implementation_factory),
         );
 
         self
@@ -261,30 +224,13 @@ impl Container {
     /// ```
     pub fn register_autoresolved<ResolvedType, RegisteredType>(
         &mut self,
-        registration_fn: impl Fn(Option<ResolvedType>) -> RegisteredType + 'static,
+        registration_fn: impl Fn(Option<ResolvedType>) -> RegisteredType + 'static + Send + Sync + Clone,
     ) -> &mut Self
     where
         ResolvedType: AutoResolvable,
         RegisteredType: 'static,
     {
-        let registration_fn = Arc::new(registration_fn);
-        let implementation_factory: Box<ImplementationFactory<RegisteredType>> = {
-            let registration_fn = registration_fn.clone();
-            Box::new(move |container| registration_fn(ResolvedType::resolve(container)))
-        };
-        self.registered_types.insert(
-            TypeId::of::<RegisteredType>(),
-            Arc::new(RwLock::new(implementation_factory)),
-        );
-
-        let partially_applied_implementation_factory =
-            partially_apply_implementation_factory(registration_fn);
-
-        self.registered_types.insert(
-            TypeId::of::<Box<dyn Fn() -> RegisteredType>>(),
-            Arc::new(RwLock::new(partially_applied_implementation_factory)),
-        );
-
+        self.register_factory(move |container| registration_fn(ResolvedType::resolve(container)));
         self
     }
 
@@ -363,18 +309,14 @@ impl Container {
         T: 'static,
     {
         let type_id = TypeId::of::<T>();
-        let resolvable_type = self
-            .registered_types
-            .get(&type_id)?
-            .read()
-            .expect("A thread accessing this instance of Container is poisoned");
+        let resolvable_type = self.registered_types.get(&type_id)?;
         let implementation_factory = resolvable_type
             .downcast_ref::<Box<ImplementationFactory<T>>>()
             .unwrap_or_else(|| {
                 panic!(
                     "Internal error: Couldn't downcast stored implementation factory to resolved \
                      type \"{}\"",
-                    type_name::<Box<ImplementationFactory<T>>>()
+                    type_name::<T>()
                 )
             });
         let value: T = implementation_factory(self);
@@ -426,20 +368,6 @@ macro_rules! register {
     };
 }
 
-fn partially_apply_implementation_factory<ResolvedType, RegisteredType>(
-    registration_fn: Arc<impl Fn(Option<ResolvedType>) -> RegisteredType + 'static>,
-) -> Box<ImplementationFactory<Box<dyn Fn() -> RegisteredType>>>
-where
-    ResolvedType: AutoResolvable,
-    RegisteredType: 'static,
-{
-    Box::new(move |container| {
-        let registration_fn = registration_fn.clone();
-        let container = container.clone();
-        Box::new(move || registration_fn(ResolvedType::resolve(&container)))
-    })
-}
-
 fn type_name<T>() -> &'static str {
     unsafe { std::intrinsics::type_name::<T>() }
 }
@@ -458,6 +386,7 @@ pub mod internal {
 mod tests {
     use super::*;
     use std::rc::Rc;
+    use std::sync::Mutex;
 
     #[test]
     fn resolves_none_when_not_registered() {
@@ -496,18 +425,20 @@ mod tests {
     #[test]
     fn resolves_rc_of_trait_object() {
         let mut container = Container::new();
-        container.register_clone(Rc::new(FooImpl::new()) as Rc<dyn Foo>);
+        container
+            .register_clone(Arc::new(Mutex::new(FooImpl::new())) as Arc<Mutex<dyn Foo + Send>>);
 
-        let resolved = container.resolve::<Rc<dyn Foo>>();
+        let resolved = container.resolve::<Arc<Mutex<dyn Foo + Send>>>();
         assert!(resolved.is_some())
     }
 
     #[test]
     fn generates_factory_of_rc_of_trait_object() {
         let mut container = Container::new();
-        container.register_clone(Rc::new(FooImpl::new()) as Rc<dyn Foo>);
+        container
+            .register_clone(Arc::new(Mutex::new(FooImpl::new())) as Arc<Mutex<dyn Foo + Send>>);
 
-        let resolved = container.resolve::<Box<dyn Fn() -> Rc<dyn Foo>>>();
+        let resolved = container.resolve::<Box<dyn Fn() -> Arc<Mutex<dyn Foo + Send>>>>();
         assert!(resolved.is_some())
     }
 
