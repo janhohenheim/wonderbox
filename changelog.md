@@ -19,3 +19,4 @@
     - Rename `register_autoresolved` to `register_autoresolvable`
     - Rename `register!` to `register_autoresolvable!`
 - Improve documentation
+- Make `register_autoresolvable!` work with any simple wrapper around a trait object
