@@ -478,18 +478,20 @@ mod tests {
     #[test]
     fn resolves_rc_of_trait_object() {
         let mut container = Container::new();
-        container.register_clone(Rc::new(FooImpl::new()) as Rc<dyn Foo>);
+        container
+            .register_clone(Arc::new(Mutex::new(FooImpl::new())) as Arc<Mutex<dyn Foo + Send>>);
 
-        let resolved = container.resolve::<Rc<dyn Foo>>();
+        let resolved = container.resolve::<Arc<Mutex<dyn Foo>>>();
         assert!(resolved.is_some())
     }
 
     #[test]
     fn generates_factory_of_rc_of_trait_object() {
         let mut container = Container::new();
-        container.register_clone(Rc::new(FooImpl::new()) as Rc<dyn Foo>);
+        container
+            .register_clone(Arc::new(Mutex::new(FooImpl::new())) as Arc<Mutex<dyn Foo + Send>>);
 
-        let resolved = container.resolve::<Box<dyn Fn() -> Rc<dyn Foo>>>();
+        let resolved = container.resolve::<Box<dyn Fn() -> Arc<Mutex<dyn Foo>>>>();
         assert!(resolved.is_some())
     }
 
