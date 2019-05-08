@@ -347,7 +347,7 @@ impl Container {
         let type_id = TypeId::of::<T>();
         let resolvable_type = self.registered_types.get(&type_id)?;
         let implementation_factory = resolvable_type
-            .downcast_ref::<Box<Mutex<ImplementationFactory<T>>>>()
+            .downcast_ref::<Mutex<Box<ImplementationFactory<T>>>>()
             .unwrap_or_else(|| {
                 panic!(
                     "Internal error: Couldn't downcast stored \
