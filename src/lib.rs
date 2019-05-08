@@ -80,13 +80,13 @@ impl Container {
     /// container.register_clone(String::new());
     /// ```
     ///
-    /// Registering an Rc of a trait object type:
+    /// Registering a reference counted trait object:
     /// ```
     /// use wonderbox::Container;
-    /// use std::rc::Rc;
+    /// use std::sync::{Arc, Mutex};
     ///
     /// let mut container = Container::new();
-    /// container.register_clone(Rc::new(FooImpl)as Rc<dyn Foo>);
+    /// container.register_clone(Arc::new(Mutex::new(FooImpl)));
     ///
     /// trait Foo {}
     /// struct FooImpl;
