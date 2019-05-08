@@ -11,6 +11,7 @@ impl Foo {
 }
 
 #[test]
+#[allow(clippy::blacklisted_name)]
 fn test() {
     let _foo = Foo::new();
 }

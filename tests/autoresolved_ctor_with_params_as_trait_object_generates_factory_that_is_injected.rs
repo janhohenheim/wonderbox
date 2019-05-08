@@ -38,6 +38,7 @@ impl Bar for BarImpl {
 }
 
 #[test]
+#[allow(clippy::blacklisted_name)]
 fn test() {
     let mut container = Container::new();
     container.register_clone("foo".to_string());
