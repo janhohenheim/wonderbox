@@ -11,7 +11,8 @@ impl Foo {
 }
 
 #[test]
+#[allow(clippy::blacklisted_name)]
 fn test() {
     let mut container = Container::new();
-    container.register_autoresolved(|foo: Option<Foo>| foo.unwrap());
+    container.register_autoresolved(Option::<Foo>::unwrap);
 }

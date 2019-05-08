@@ -2,7 +2,7 @@
 //!
 //! # Examples
 //! ```
-//! use wonderbox::{register, Container, resolve_dependencies};
+//! use wonderbox::{register, resolve_dependencies, Container};
 //!
 //! trait Foo {}
 //!
@@ -20,14 +20,12 @@
 //!
 //! impl Foo for FooImpl {}
 //!
-//!
 //! let mut container = Container::new();
 //! container.register_clone("foo".to_string());
 //! register!(container, FooImpl as Box<dyn Foo>);
 //!
 //! let foo = container.resolve::<Box<dyn Foo>>();
 //! assert!(foo.is_some())
-//!
 //! ```
 //!
 //! [IoC]: https://en.wikipedia.org/wiki/Inversion_of_control
@@ -82,11 +80,11 @@ impl Container {
     ///
     /// Registering an Rc of a trait object type:
     /// ```
-    /// use wonderbox::Container;
     /// use std::rc::Rc;
+    /// use wonderbox::Container;
     ///
     /// let mut container = Container::new();
-    /// container.register_clone(Rc::new(FooImpl)as Rc<dyn Foo>);
+    /// container.register_clone(Rc::new(FooImpl) as Rc<dyn Foo>);
     ///
     /// trait Foo {}
     /// struct FooImpl;
@@ -149,7 +147,7 @@ impl Container {
 
         let partially_applied_implementation_factory: Box<
             ImplementationFactory<Box<dyn Fn() -> T>>,
-        > = Box::new(|_container: &Container| Box::new(|| T::default()));
+        > = Box::new(|_container: &Container| Box::new(T::default));
 
         self.registered_types.insert(
             TypeId::of::<Box<dyn Fn() -> T>>(),
@@ -174,21 +172,23 @@ impl Container {
     ///
     /// Registering a factory for a trait object with dependencies:
     /// ```
-    /// use wonderbox::Container;
     /// use std::rc::Rc;
+    /// use wonderbox::Container;
     ///
     /// let mut container = Container::new();
     /// let dependency = "I'm a dependency".to_string();
     /// container.register_clone(dependency);
     /// container.register_factory(|container| {
     ///     let dependency = container.resolve::<String>().unwrap();
-    ///     let registered_type = FooImpl { stored_string: dependency };
+    ///     let registered_type = FooImpl {
+    ///         stored_string: dependency,
+    ///     };
     ///     Box::new(registered_type) as Box<dyn Foo>
     /// });
     ///
     /// trait Foo {}
     /// struct FooImpl {
-    ///     stored_string: String
+    ///     stored_string: String,
     /// }
     /// impl Foo for FooImpl {}
     /// ```
@@ -234,7 +234,7 @@ impl Container {
     ///
     /// # Examples
     /// ```
-    /// use wonderbox::{Container, resolve_dependencies};
+    /// use wonderbox::{resolve_dependencies, Container};
     ///
     /// trait Foo {}
     ///
@@ -299,7 +299,9 @@ impl Container {
     /// let mut second_container = Container::new();
     /// second_container.register_factory(|container| {
     ///     let dependency = container.resolve::<String>().unwrap();
-    ///     let foo = FooImpl { stored_string: dependency };
+    ///     let foo = FooImpl {
+    ///         stored_string: dependency,
+    ///     };
     ///     Box::new(foo) as Box<dyn Foo>
     /// });
     ///
@@ -307,7 +309,7 @@ impl Container {
     ///
     /// trait Foo {}
     /// struct FooImpl {
-    ///     stored_string: String
+    ///     stored_string: String,
     /// }
     /// impl Foo for FooImpl {}
     /// ```
@@ -341,7 +343,9 @@ impl Container {
     /// container.register_clone("foo".to_string());
     /// container.register_factory(|container| {
     ///     let dependency = container.resolve::<String>().unwrap();
-    ///     let foo = FooImpl { stored_string: dependency };
+    ///     let foo = FooImpl {
+    ///         stored_string: dependency,
+    ///     };
     ///     Box::new(foo) as Box<dyn Foo>
     /// });
     ///
@@ -350,7 +354,7 @@ impl Container {
     ///
     /// trait Foo {}
     /// struct FooImpl {
-    ///     stored_string: String
+    ///     stored_string: String,
     /// }
     /// impl Foo for FooImpl {}
     /// ```
@@ -368,8 +372,8 @@ impl Container {
             .downcast_ref::<Box<ImplementationFactory<T>>>()
             .unwrap_or_else(|| {
                 panic!(
-                    "Internal error: Couldn't downcast stored \
-                     implementation factory to resolved type \"{}\"",
+                    "Internal error: Couldn't downcast stored implementation factory to resolved \
+                     type \"{}\"",
                     type_name::<Box<ImplementationFactory<T>>>()
                 )
             });
@@ -383,7 +387,7 @@ impl Container {
 ///
 /// # Examples
 /// ```
-/// use wonderbox::{register, Container, resolve_dependencies};
+/// use wonderbox::{register, resolve_dependencies, Container};
 ///
 /// trait Foo {}
 ///
@@ -400,7 +404,6 @@ impl Container {
 /// }
 ///
 /// impl Foo for FooImpl {}
-///
 ///
 /// let mut container = Container::new();
 /// container.register_clone("foo".to_string());
@@ -451,6 +454,7 @@ pub mod internal {
 }
 
 #[cfg(test)]
+#[allow(clippy::blacklisted_name)]
 mod tests {
     use super::*;
     use std::rc::Rc;
