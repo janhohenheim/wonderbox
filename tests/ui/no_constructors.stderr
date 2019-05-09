@@ -1,0 +1,5 @@
+error: Expected one constructor, found 0
+ --> $DIR/no_constructors.rs:6:1
+  |
+6 | impl List {
+  | ^^^^
