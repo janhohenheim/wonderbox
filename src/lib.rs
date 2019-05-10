@@ -260,7 +260,7 @@ impl Container {
         let resolvable_type = self
             .registered_types
             .get(key)
-            .or(self.registered_type_factories.get(key))?;
+            .or_else(|| self.registered_type_factories.get(key))?;
         let implementation_factory = resolvable_type
             .downcast_ref::<Box<ImplementationFactory<T>>>()
             .unwrap_or_else(|| {
