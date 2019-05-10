@@ -19,6 +19,6 @@ fn test() {
     container.register(|_| "foo".to_string());
     register_autoresolvable!(container, Foo);
 
-    let foo = container.resolve::<Foo>();
+    let foo = container.try_resolve::<Foo>();
     assert!(foo.is_some())
 }

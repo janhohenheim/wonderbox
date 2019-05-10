@@ -24,7 +24,7 @@
 //! container.register(|_| "foo".to_string());
 //! register_autoresolvable!(container, FooImpl as Box<dyn Foo>);
 //!
-//! let foo = container.resolve::<Box<dyn Foo>>();
+//! let foo = container.try_resolve::<Box<dyn Foo>>();
 //! assert!(foo.is_some())
 //! ```
 //!
@@ -67,7 +67,7 @@ impl Container {
     }
 
     /// Register a function that returns the implementation of a type.
-    /// Can be used to resolve dependencies.
+    /// Can be used to try_resolve dependencies.
     ///
     /// # Examples
     ///
@@ -87,7 +87,7 @@ impl Container {
     /// let mut container = Container::new();
     /// container.register(|_| "I'm a dependency".to_string());
     /// container.register(|container| {
-    ///     let dependency = container.resolve::<String>().unwrap();
+    ///     let dependency = container.try_resolve::<String>().unwrap();
     ///     let registered_type = FooImpl {
     ///         stored_string: dependency,
     ///     };
@@ -167,7 +167,7 @@ impl Container {
     ///     .register_autoresolvable(|foo: Option<FooImpl>| Box::new(foo.unwrap()) as Box<dyn Foo>);
     /// register_autoresolvable!(container, FooImpl as Box<dyn Foo>);
     ///
-    /// let foo = container.resolve::<Box<dyn Foo>>();
+    /// let foo = container.try_resolve::<Box<dyn Foo>>();
     /// assert!(foo.is_some())
     /// ```
     pub fn register_autoresolvable<ResolvedType, RegisteredType>(
@@ -178,7 +178,7 @@ impl Container {
         ResolvedType: AutoResolvable,
         RegisteredType: 'static,
     {
-        self.register(move |container| registration_fn(ResolvedType::resolve(container)));
+        self.register(move |container| registration_fn(ResolvedType::try_resolve(container)));
         self
     }
 
@@ -192,7 +192,7 @@ impl Container {
     ///
     /// let mut second_container = Container::new();
     /// second_container.register(|container| {
-    ///     let dependency = container.resolve::<String>().unwrap();
+    ///     let dependency = container.try_resolve::<String>().unwrap();
     ///     let foo = FooImpl {
     ///         stored_string: dependency,
     ///     };
@@ -224,7 +224,7 @@ impl Container {
     /// let mut container = Container::new();
     /// container.register(|_| "some dependency".to_string());
     ///
-    /// let resolved = container.resolve::<String>();
+    /// let resolved = container.try_resolve::<String>();
     /// assert!(resolved.is_some())
     /// ```
     ///
@@ -236,14 +236,14 @@ impl Container {
     ///
     /// container.register(|_| "foo".to_string());
     /// container.register(|container| {
-    ///     let dependency = container.resolve::<String>().unwrap();
+    ///     let dependency = container.try_resolve::<String>().unwrap();
     ///     let foo = FooImpl {
     ///         stored_string: dependency,
     ///     };
     ///     Box::new(foo) as Box<dyn Foo>
     /// });
     ///
-    /// let resolved = container.resolve::<Box<dyn Foo>>();
+    /// let resolved = container.try_resolve::<Box<dyn Foo>>();
     /// assert!(resolved.is_some());
     ///
     /// trait Foo {}
@@ -252,7 +252,7 @@ impl Container {
     /// }
     /// impl Foo for FooImpl {}
     /// ```
-    pub fn resolve<T>(&self) -> Option<T>
+    pub fn try_resolve<T>(&self) -> Option<T>
     where
         T: 'static,
     {
@@ -267,8 +267,69 @@ impl Container {
                     type_name::<T>()
                 )
             });
-        let value: T = implementation_factory(self);
+        let value = implementation_factory(self);
         Some(value)
+    }
+
+    /// Retrieves the registered implementation of the specified type.
+    /// # Errors
+    /// Panics with a nice error message if the type was not registered
+    /// # Examples
+    /// Resolve a simple registered type
+    /// ```
+    /// use wonderbox::Container;
+    ///
+    /// let mut container = Container::new();
+    /// container.register(|_| "some dependency".to_string());
+    ///
+    /// let resolved = container.try_resolve::<String>();
+    /// assert!(resolved.is_some())
+    /// ```
+    ///
+    /// Resolve a trait object
+    /// ```
+    /// use wonderbox::Container;
+    ///
+    /// let mut container = Container::new();
+    ///
+    /// container.register(|_| "foo".to_string());
+    /// container.register(|container| {
+    ///     let dependency = container.try_resolve::<String>().unwrap();
+    ///     let foo = FooImpl {
+    ///         stored_string: dependency,
+    ///     };
+    ///     Box::new(foo) as Box<dyn Foo>
+    /// });
+    ///
+    /// let resolved = container.resolve::<Box<dyn Foo>>();
+    ///
+    /// trait Foo {}
+    /// struct FooImpl {
+    ///     stored_string: String,
+    /// }
+    /// impl Foo for FooImpl {}
+    /// ```
+    pub fn resolve<T>(&self) -> T
+    where
+        T: 'static,
+    {
+        let type_id = TypeId::of::<T>();
+        let resolvable_type = self.registered_types.get(&type_id).unwrap_or_else(|| {
+            panic!(
+                "Wonderbox failed to resolve the type \"{}\".",
+                type_name::<T>()
+            )
+        });
+        let implementation_factory = resolvable_type
+            .downcast_ref::<Box<ImplementationFactory<T>>>()
+            .unwrap_or_else(|| {
+                panic!(
+                    "Internal error: Couldn't downcast stored implementation factory to resolved \
+                     type \"{}\".",
+                    type_name::<T>()
+                )
+            });
+        implementation_factory(self)
     }
 }
 
@@ -299,7 +360,7 @@ impl Container {
 /// container.register(|_| "foo".to_string());
 /// register_autoresolvable!(container, FooImpl as Box<dyn Foo>);
 ///
-/// let foo = container.resolve::<Box<dyn Foo>>();
+/// let foo = container.try_resolve::<Box<dyn Foo>>();
 /// assert!(foo.is_some())
 /// ```
 #[macro_export]
@@ -325,7 +386,7 @@ pub mod internal {
     use super::*;
 
     pub trait AutoResolvable: Sized {
-        fn resolve(container: &Container) -> Option<Self>;
+        fn try_resolve(container: &Container) -> Option<Self>;
     }
 }
 
@@ -338,8 +399,25 @@ mod tests {
     #[test]
     fn resolves_none_when_not_registered() {
         let container = Container::new();
-        let resolved = container.resolve::<String>();
+        let resolved = container.try_resolve::<String>();
         assert!(resolved.is_none())
+    }
+
+    #[test]
+    #[should_panic(expected = "Wonderbox failed to resolve the type \"std::string::String\".")]
+    fn panics_when_unwraping_type_that_is_not_registered() {
+        let container = Container::new();
+        let _resolved = container.resolve::<String>();
+    }
+
+    #[test]
+    #[should_panic(
+        expected = "Wonderbox failed to resolve the type \"std::boxed::Box<dyn std::ops::Fn() -> \
+                    std::boxed::Box<dyn tests::Foo>>\"."
+    )]
+    fn panics_when_unwraping_trait_object_that_is_not_registered() {
+        let container = Container::new();
+        let _resolved = container.resolve::<Box<dyn Fn() -> Box<dyn Foo>>>();
     }
 
     #[test]
@@ -348,7 +426,7 @@ mod tests {
         let factory = |_container: &Container| Rc::new(FooImpl::new()) as Rc<dyn Foo>;
         container.register(factory);
 
-        let resolved = container.resolve::<Rc<dyn Foo>>();
+        let resolved = container.try_resolve::<Rc<dyn Foo>>();
         assert!(resolved.is_some())
     }
 
@@ -358,8 +436,17 @@ mod tests {
         let factory = |_container: &Container| Box::new(FooImpl::new()) as Box<dyn Foo>;
         container.register(factory);
 
-        let resolved = container.resolve::<Box<dyn Foo>>();
+        let resolved = container.try_resolve::<Box<dyn Foo>>();
         assert!(resolved.is_some())
+    }
+
+    #[test]
+    fn resolves_and_unwraps_factory_of_box_of_trait_object() {
+        let mut container = Container::new();
+        let factory = |_container: &Container| Box::new(FooImpl::new()) as Box<dyn Foo>;
+        container.register(factory);
+
+        let _resolved = container.resolve::<Box<dyn Foo>>();
     }
 
     #[test]
@@ -369,7 +456,7 @@ mod tests {
         let boxed_factory = Box::new(factory);
         container.register(boxed_factory);
 
-        let resolved = container.resolve::<Box<dyn Foo>>();
+        let resolved = container.try_resolve::<Box<dyn Foo>>();
         assert!(resolved.is_some())
     }
 
@@ -379,12 +466,12 @@ mod tests {
 
         container.register(|_| "foo".to_string());
         container.register(|container| {
-            let dependency = container.resolve::<String>().unwrap();
+            let dependency = container.try_resolve::<String>().unwrap();
             let bar = BarImpl::new(dependency);
             Box::new(bar) as Box<dyn Bar>
         });
 
-        let resolved = container.resolve::<Box<dyn Bar>>();
+        let resolved = container.try_resolve::<Box<dyn Bar>>();
         assert!(resolved.is_some())
     }
 
@@ -395,14 +482,14 @@ mod tests {
         container.register(|_| "foo".to_string());
         container.register(|_container: &Container| Box::new(FooImpl::new()) as Box<dyn Foo>);
         container.register(|container| {
-            let clone_dependency = container.resolve::<String>().unwrap();
-            let _factory_dependency = container.resolve::<Box<dyn Foo>>().unwrap();
+            let clone_dependency = container.try_resolve::<String>().unwrap();
+            let _factory_dependency = container.try_resolve::<Box<dyn Foo>>().unwrap();
 
             let bar = BarImpl::new(clone_dependency);
             Box::new(bar) as Box<dyn Bar>
         });
 
-        let resolved = container.resolve::<Box<dyn Bar>>();
+        let resolved = container.try_resolve::<Box<dyn Bar>>();
         assert!(resolved.is_some())
     }
 
@@ -413,14 +500,14 @@ mod tests {
         container.register(|_| "foo".to_string());
         container.register(|_container: &Container| Box::new(FooImpl::new()) as Box<dyn Foo>);
         container.register(|container| {
-            let clone_dependency = container.resolve::<String>().unwrap();
-            let _factory_dependency = container.resolve::<Box<dyn Foo>>().unwrap();
+            let clone_dependency = container.try_resolve::<String>().unwrap();
+            let _factory_dependency = container.try_resolve::<Box<dyn Foo>>().unwrap();
 
             let bar = BarImpl::new(clone_dependency);
             Box::new(bar) as Box<dyn Bar>
         });
 
-        let resolved = container.resolve::<Box<dyn Fn() -> Box<dyn Bar>>>();
+        let resolved = container.try_resolve::<Box<dyn Fn() -> Box<dyn Bar>>>();
         assert!(resolved.is_some())
     }
 
@@ -431,14 +518,14 @@ mod tests {
 
         let mut second_container = Container::new();
         second_container.register(|container| {
-            let dependency = container.resolve::<String>().unwrap();
+            let dependency = container.try_resolve::<String>().unwrap();
             let bar = BarImpl::new(dependency);
             Box::new(bar) as Box<dyn Bar>
         });
 
         first_container.extend(second_container);
 
-        let resolved = first_container.resolve::<Box<dyn Bar>>();
+        let resolved = first_container.try_resolve::<Box<dyn Bar>>();
         assert!(resolved.is_some())
     }
 
