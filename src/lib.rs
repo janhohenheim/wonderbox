@@ -265,9 +265,11 @@ impl Container {
             .downcast_ref::<Box<ImplementationFactory<T>>>()
             .unwrap_or_else(|| {
                 panic!(
-                    "Internal error: Couldn't downcast stored implementation factory to resolved \
-                     type \"{}\"",
-                    type_name::<T>()
+                    "Internal error: Couldn't downcast internally stored registered type to resolved \
+                     type `{}`.\nYou've encountered a Wonderbox bug. Please consider opening an \
+                     issue at https://github.com/jnferner/wonderbox/issues/new\nAdditional info: {}",
+                    type_name::<T>(),
+                    self.resolution_failure_help()
                 )
             });
         let value = implementation_factory(self);
