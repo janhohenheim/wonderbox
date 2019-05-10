@@ -16,6 +16,6 @@ fn test() {
     let mut container = Container::new();
     container.register_autoresolvable(Option::<Foo>::unwrap);
 
-    let foo = container.resolve::<Foo>();
+    let foo = container.try_resolve::<Foo>();
     assert!(foo.is_some());
 }

@@ -18,6 +18,6 @@ fn test() {
     let mut container = Container::new();
     container.register_autoresolvable(Option::<Foo>::unwrap);
 
-    let foo_factory = container.resolve::<Box<dyn Fn() -> Foo>>();
+    let foo_factory = container.try_resolve::<Box<dyn Fn() -> Foo>>();
     assert!(foo_factory.is_some());
 }

@@ -24,6 +24,6 @@ fn test() {
     container
         .register_autoresolvable(|foo: Option<FooImpl>| Box::new(foo.unwrap()) as Box<dyn Foo>);
 
-    let foo = container.resolve::<Box<dyn Foo>>();
+    let foo = container.try_resolve::<Box<dyn Foo>>();
     assert!(foo.is_some())
 }
