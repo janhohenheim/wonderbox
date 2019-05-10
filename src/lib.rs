@@ -47,7 +47,6 @@
 pub use wonderbox_codegen::autoresolvable;
 
 use crate::internal::AutoResolvable;
-use core::any::TypeId;
 use std::any::Any;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -55,7 +54,7 @@ use std::sync::Arc;
 /// The IoC container
 #[derive(Default, Debug, Clone)]
 pub struct Container {
-    registered_types: HashMap<TypeId, Arc<dyn Any + Send + Sync>>,
+    registered_types: HashMap<&'static str, Arc<dyn Any + Send + Sync>>,
 }
 
 type ImplementationFactory<T> = dyn Fn(&Container) -> T + Send + Sync;
@@ -114,7 +113,7 @@ impl Container {
             Box::new(move |container| implementation_factory(container))
         };
         self.registered_types.insert(
-            TypeId::of::<T>(),
+            type_name::<T>(),
             Arc::new(registered_implementation_factory),
         );
 
@@ -127,7 +126,7 @@ impl Container {
         });
 
         self.registered_types.insert(
-            TypeId::of::<Box<dyn Fn() -> T>>(),
+            type_name::<Box<dyn Fn() -> T>>(),
             Arc::new(partially_applied_implementation_factory),
         );
 
@@ -256,7 +255,7 @@ impl Container {
     where
         T: 'static,
     {
-        let type_id = TypeId::of::<T>();
+        let type_id = type_name::<T>();
         let resolvable_type = self.registered_types.get(&type_id)?;
         let implementation_factory = resolvable_type
             .downcast_ref::<Box<ImplementationFactory<T>>>()
@@ -313,7 +312,7 @@ impl Container {
     where
         T: 'static,
     {
-        let type_id = TypeId::of::<T>();
+        let type_id = type_name::<T>();
         let resolvable_type = self.registered_types.get(&type_id).unwrap_or_else(|| {
             panic!(
                 "Wonderbox failed to resolve the type \"{}\".",
