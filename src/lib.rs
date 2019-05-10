@@ -47,7 +47,6 @@
 pub use wonderbox_codegen::autoresolvable;
 
 use crate::internal::AutoResolvable;
-use core::any::TypeId;
 use std::any::Any;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -55,7 +54,8 @@ use std::sync::Arc;
 /// The IoC container
 #[derive(Default, Debug, Clone)]
 pub struct Container {
-    registered_types: HashMap<TypeId, Arc<dyn Any + Send + Sync>>,
+    registered_types: HashMap<&'static str, Arc<dyn Any + Send + Sync>>,
+    registered_type_factories: HashMap<&'static str, Arc<dyn Any + Send + Sync>>,
 }
 
 type ImplementationFactory<T> = dyn Fn(&Container) -> T + Send + Sync;
@@ -114,7 +114,7 @@ impl Container {
             Box::new(move |container| implementation_factory(container))
         };
         self.registered_types.insert(
-            TypeId::of::<T>(),
+            type_name::<T>(),
             Arc::new(registered_implementation_factory),
         );
 
@@ -126,8 +126,8 @@ impl Container {
             Box::new(move || implementation_factory(&container))
         });
 
-        self.registered_types.insert(
-            TypeId::of::<Box<dyn Fn() -> T>>(),
+        self.registered_type_factories.insert(
+            type_name::<Box<dyn Fn() -> T>>(),
             Arc::new(partially_applied_implementation_factory),
         );
 
@@ -256,15 +256,20 @@ impl Container {
     where
         T: 'static,
     {
-        let type_id = TypeId::of::<T>();
-        let resolvable_type = self.registered_types.get(&type_id)?;
+        let key = type_name::<T>();
+        let resolvable_type = self
+            .registered_types
+            .get(key)
+            .or_else(|| self.registered_type_factories.get(key))?;
         let implementation_factory = resolvable_type
             .downcast_ref::<Box<ImplementationFactory<T>>>()
             .unwrap_or_else(|| {
                 panic!(
-                    "Internal error: Couldn't downcast stored implementation factory to resolved \
-                     type \"{}\"",
-                    type_name::<T>()
+                    "Internal error: Couldn't downcast internally stored registered type to resolved \
+                     type `{}`.\nYou've encountered a Wonderbox bug. Please consider opening an \
+                     issue at https://github.com/jnferner/wonderbox/issues/new\nAdditional info: {}",
+                    type_name::<T>(),
+                    self.resolution_failure_help()
                 )
             });
         let value = implementation_factory(self);
@@ -313,23 +318,49 @@ impl Container {
     where
         T: 'static,
     {
-        let type_id = TypeId::of::<T>();
-        let resolvable_type = self.registered_types.get(&type_id).unwrap_or_else(|| {
+        self.try_resolve::<T>().unwrap_or_else(|| {
             panic!(
-                "Wonderbox failed to resolve the type \"{}\".",
-                type_name::<T>()
+                "Wonderbox failed to resolve the type `{}`.\nHelp: {}",
+                type_name::<T>(),
+                self.resolution_failure_help()
             )
-        });
-        let implementation_factory = resolvable_type
-            .downcast_ref::<Box<ImplementationFactory<T>>>()
-            .unwrap_or_else(|| {
-                panic!(
-                    "Internal error: Couldn't downcast stored implementation factory to resolved \
-                     type \"{}\".",
-                    type_name::<T>()
-                )
-            });
-        implementation_factory(self)
+        })
+    }
+
+    fn resolution_failure_help(&self) -> String {
+        if self.registered_types.is_empty() {
+            "No registered types were found.".into()
+        } else {
+            format!(
+                "The following registered types were found.\n{}{}",
+                self.pretty_print_registered_types(),
+                "In addition, the following factories were generated for each type `T`.\n- \
+                 std::boxed::Box<dyn Fn() -> T>"
+            )
+        }
+    }
+
+    fn pretty_print_registered_types(&self) -> String {
+        // Chosen arbitrarily
+        const AVERAGE_LENGTH_OF_TYPE_NAME: usize = 20;
+
+        let initial_capacity = self.registered_types.len() * AVERAGE_LENGTH_OF_TYPE_NAME;
+        let mut registered_type_names = self.registered_type_names();
+        registered_type_names.sort();
+
+        registered_type_names
+            .iter()
+            .map(|type_name| format!("- {}\n", type_name))
+            .fold(String::with_capacity(initial_capacity), |acc, type_name| {
+                acc + &type_name
+            })
+    }
+
+    fn registered_type_names(&self) -> Vec<String> {
+        self.registered_types
+            .keys()
+            .map(|&key| String::from(key))
+            .collect()
     }
 }
 
@@ -404,7 +435,8 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "Wonderbox failed to resolve the type \"std::string::String\".")]
+    #[should_panic(expected = "Wonderbox failed to resolve the type \
+                               `std::string::String`.\nHelp: No registered types were found.")]
     fn panics_when_unwraping_type_that_is_not_registered() {
         let container = Container::new();
         let _resolved = container.resolve::<String>();
@@ -412,12 +444,27 @@ mod tests {
 
     #[test]
     #[should_panic(
-        expected = "Wonderbox failed to resolve the type \"std::boxed::Box<dyn std::ops::Fn() -> \
-                    std::boxed::Box<dyn tests::Foo>>\"."
+        expected = "Wonderbox failed to resolve the type `std::boxed::Box<dyn std::ops::Fn() -> \
+                    std::boxed::Box<dyn tests::Foo>>`.\nHelp: No registered types were found."
     )]
     fn panics_when_unwraping_trait_object_that_is_not_registered() {
         let container = Container::new();
         let _resolved = container.resolve::<Box<dyn Fn() -> Box<dyn Foo>>>();
+    }
+
+    #[test]
+    #[should_panic(
+        expected = "Wonderbox failed to resolve the type `std::boxed::Box<dyn \
+                    tests::Bar>`.\nHelp: The following registered types were found.\n- \
+                    std::boxed::Box<dyn tests::Foo>\n- std::string::String\nIn addition, the \
+                    following factories were generated for each type `T`.\n- std::boxed::Box<dyn \
+                    Fn() -> T>"
+    )]
+    fn panics_when_unwraping_trait_object_that_is_not_registered_when_other_types_are_registered() {
+        let mut container = Container::new();
+        container.register(|_| "foo".to_string());
+        container.register(|_| Box::new(FooImpl::new()) as Box<dyn Foo>);
+        let _resolved = container.resolve::<Box<dyn Bar>>();
     }
 
     #[test]
