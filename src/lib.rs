@@ -55,6 +55,7 @@ use std::sync::Arc;
 #[derive(Default, Debug, Clone)]
 pub struct Container {
     registered_types: HashMap<&'static str, Arc<dyn Any + Send + Sync>>,
+    registered_type_factories: HashMap<&'static str, Arc<dyn Any + Send + Sync>>,
 }
 
 type ImplementationFactory<T> = dyn Fn(&Container) -> T + Send + Sync;
@@ -125,7 +126,7 @@ impl Container {
             Box::new(move || implementation_factory(&container))
         });
 
-        self.registered_types.insert(
+        self.registered_type_factories.insert(
             type_name::<Box<dyn Fn() -> T>>(),
             Arc::new(partially_applied_implementation_factory),
         );
@@ -256,7 +257,10 @@ impl Container {
         T: 'static,
     {
         let key = type_name::<T>();
-        let resolvable_type = self.registered_types.get(key)?;
+        let resolvable_type = self
+            .registered_types
+            .get(key)
+            .or(self.registered_type_factories.get(key))?;
         let implementation_factory = resolvable_type
             .downcast_ref::<Box<ImplementationFactory<T>>>()
             .unwrap_or_else(|| {
