@@ -51,13 +51,13 @@ fn generate_autoresolvable_impl(item: &Item) -> Result<proc_macro2::TokenStream>
 
     let resolutions = generate_type_resolutions(&constructor_argument_types);
 
-    let (impl_generics, type_generics, where_clause) = item.generics.split_for_impl();
+    let (impl_generics, _type_generics, where_clause) = item.generics.split_for_impl();
     let ident = &constructor.ident;
 
     Ok(quote! {
         #item
 
-        impl #impl_generics wonderbox::internal::AutoResolvable for #self_ty #type_generics #where_clause {
+        impl #impl_generics wonderbox::internal::AutoResolvable for #self_ty #where_clause {
              fn try_resolve(container: &wonderbox::Container) -> Option<Self> {
                 Some(Self::#ident(#resolutions))
              }
