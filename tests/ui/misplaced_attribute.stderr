@@ -1,17 +1,17 @@
 error: #[autoresolvable] needs to be placed over an impl block
- --> $DIR/misplased_attribute.rs:4:1
+ --> $DIR/misplaced_attribute.rs:4:1
   |
 4 | struct Struct {}
   | ^^^^^^
 
 error: #[autoresolvable] needs to be placed over an impl block
- --> $DIR/misplased_attribute.rs:7:1
+ --> $DIR/misplaced_attribute.rs:7:1
   |
 7 | trait Trait {}
   | ^^^^^
 
 error: #[autoresolvable] needs to be placed over an impl block
-  --> $DIR/misplased_attribute.rs:10:1
+  --> $DIR/misplaced_attribute.rs:10:1
    |
 10 | fn function() {}
    | ^^
