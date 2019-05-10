@@ -330,8 +330,10 @@ impl Container {
             "No registered types were found.".into()
         } else {
             format!(
-                "The following registered types were found:\n{}",
-                self.pretty_print_registered_types()
+                "The following registered types were found:\n{}{}",
+                self.pretty_print_registered_types(),
+                "In addition, the following factories were generated for each type `T`.\n- \
+                 Box<dyn Fn() -> T>"
             )
         }
     }
@@ -451,8 +453,9 @@ mod tests {
     #[test]
     #[should_panic(
         expected = "Wonderbox failed to resolve the type \"std::boxed::Box<dyn \
-                    tests::Bar>\".\nHelp: The following registered types were found:\n- \
-                    std::boxed::Box<dyn tests::Foo>\n- std::string::String\n"
+                    tests::Bar>\".\nHelp: The following registered types were found.\n- \
+                    std::boxed::Box<dyn tests::Foo>\n- std::string::String\nIn addition, a \
+                    factory in the form of \"Box<dyn Fn() -> T>\" was generated for each type."
     )]
     fn panics_when_unwraping_trait_object_that_is_not_registered_when_other_types_are_registered() {
         let mut container = Container::new();
