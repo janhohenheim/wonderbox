@@ -25,3 +25,4 @@
 
 - `resolve` now unwraps `T`, printing a helpful message if it fails. 
   The old behavior can still be accessed via `try_resolve`
+- Add support for the registration of generics
