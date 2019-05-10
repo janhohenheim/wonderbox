@@ -447,9 +447,9 @@ mod tests {
 
     #[test]
     #[should_panic(
-        expected = "Wonderbox failed to resolve the type \"std::boxed::Box<dyn std::ops::Fn() -> \
-                    std::boxed::Box<dyn tests::Foo>>\".\nHelp:The following types were found:\n- \
-                    std::string::String\n- std::boxed::Boxed<dyn tests::Foo>\n"
+        expected = "Wonderbox failed to resolve the type \"std::boxed::Box<dyn \
+                    tests::Bar>\".\nHelp: The following registered types were found:\n- \
+                    std::boxed::Boxed<dyn tests::Foo>\n- std::string::String\n"
     )]
     fn panics_when_unwraping_trait_object_that_is_not_registered_when_other_types_are_registered() {
         let mut container = Container::new();
