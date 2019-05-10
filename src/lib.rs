@@ -318,7 +318,7 @@ impl Container {
     {
         self.try_resolve::<T>().unwrap_or_else(|| {
             panic!(
-                "Wonderbox failed to resolve the type \"{}\".\nHelp: {}",
+                "Wonderbox failed to resolve the type `{}`.\nHelp: {}",
                 type_name::<T>(),
                 self.resolution_failure_help()
             )
@@ -434,7 +434,7 @@ mod tests {
 
     #[test]
     #[should_panic(expected = "Wonderbox failed to resolve the type \
-                               \"std::string::String\".\nHelp: No registered types were found.")]
+                               `std::string::String`.\nHelp: No registered types were found.")]
     fn panics_when_unwraping_type_that_is_not_registered() {
         let container = Container::new();
         let _resolved = container.resolve::<String>();
@@ -442,8 +442,8 @@ mod tests {
 
     #[test]
     #[should_panic(
-        expected = "Wonderbox failed to resolve the type \"std::boxed::Box<dyn std::ops::Fn() -> \
-                    std::boxed::Box<dyn tests::Foo>>\".\nHelp: No registered types were found."
+        expected = "Wonderbox failed to resolve the type `std::boxed::Box<dyn std::ops::Fn() -> \
+                    std::boxed::Box<dyn tests::Foo>>`.\nHelp: No registered types were found."
     )]
     fn panics_when_unwraping_trait_object_that_is_not_registered() {
         let container = Container::new();
@@ -452,8 +452,8 @@ mod tests {
 
     #[test]
     #[should_panic(
-        expected = "Wonderbox failed to resolve the type \"std::boxed::Box<dyn \
-                    tests::Bar>\".\nHelp: The following registered types were found.\n- \
+        expected = "Wonderbox failed to resolve the type `std::boxed::Box<dyn \
+                    tests::Bar>`.\nHelp: The following registered types were found.\n- \
                     std::boxed::Box<dyn tests::Foo>\n- std::string::String\nIn addition, a \
                     factory in the form of \"Box<dyn Fn() -> T>\" was generated for each type."
     )]
