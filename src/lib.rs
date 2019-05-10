@@ -404,6 +404,13 @@ mod tests {
     }
 
     #[test]
+    #[should_panic(expected = "Wonderbox failed to resolve the type \"std::string::String\".")]
+    fn panics_when_unwraping_type_that_is_not_registered() {
+        let container = Container::new();
+        let _resolved = container.resolve::<String>();
+    }
+
+    #[test]
     fn resolves_factory_of_rc_of_trait_object() {
         let mut container = Container::new();
         let factory = |_container: &Container| Rc::new(FooImpl::new()) as Rc<dyn Foo>;
@@ -421,6 +428,15 @@ mod tests {
 
         let resolved = container.try_resolve::<Box<dyn Foo>>();
         assert!(resolved.is_some())
+    }
+
+    #[test]
+    fn resolves_and_unwraps_factory_of_box_of_trait_object() {
+        let mut container = Container::new();
+        let factory = |_container: &Container| Box::new(FooImpl::new()) as Box<dyn Foo>;
+        container.register(factory);
+
+        let _resolved = container.resolve::<Box<dyn Foo>>();
     }
 
     #[test]
