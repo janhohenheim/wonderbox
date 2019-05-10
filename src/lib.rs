@@ -319,6 +319,13 @@ impl Container {
             )
         })
     }
+
+    fn registered_types(&self) -> Vec<String> {
+        self.registered_types
+            .keys()
+            .map(|&key| String::from(key))
+            .collect()
+    }
 }
 
 /// Primary way to register types annotated with `#[autoresolvable]`.
