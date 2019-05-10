@@ -255,8 +255,8 @@ impl Container {
     where
         T: 'static,
     {
-        let type_id = type_name::<T>();
-        let resolvable_type = self.registered_types.get(&type_id)?;
+        let type_name = type_name::<T>();
+        let resolvable_type = self.registered_types.get(&type_name)?;
         let implementation_factory = resolvable_type
             .downcast_ref::<Box<ImplementationFactory<T>>>()
             .unwrap_or_else(|| {
