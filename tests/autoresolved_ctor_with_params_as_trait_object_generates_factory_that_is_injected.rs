@@ -45,7 +45,7 @@ fn test() {
     register_autoresolvable!(container, FooImpl as Box<dyn Foo>);
     register_autoresolvable!(container, BarImpl as Box<dyn Bar>);;
 
-    let bar = container.resolve::<Box<dyn Bar>>();
+    let bar = container.try_resolve::<Box<dyn Bar>>();
     assert!(bar.is_some());
 
     let _foo = bar.unwrap().create_foo();

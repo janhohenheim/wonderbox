@@ -58,7 +58,7 @@ fn generate_autoresolvable_impl(item: &Item) -> Result<proc_macro2::TokenStream>
         #item
 
         impl #impl_generics wonderbox::internal::AutoResolvable for #self_ty #type_generics #where_clause {
-             fn resolve(container: &wonderbox::Container) -> Option<Self> {
+             fn try_resolve(container: &wonderbox::Container) -> Option<Self> {
                 Some(Self::#ident(#resolutions))
              }
         }
@@ -173,7 +173,7 @@ fn generate_type_resolutions(types: &[&Type]) -> Punctuated<proc_macro2::TokenSt
         .iter()
         .map(|type_| {
             quote! {
-                container.resolve::<#type_>()?
+                container.try_resolve::<#type_>()?
             }
         })
         .collect()
