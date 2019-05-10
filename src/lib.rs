@@ -312,23 +312,12 @@ impl Container {
     where
         T: 'static,
     {
-        let type_id = type_name::<T>();
-        let resolvable_type = self.registered_types.get(&type_id).unwrap_or_else(|| {
+        self.try_resolve::<T>().unwrap_or_else(|| {
             panic!(
                 "Wonderbox failed to resolve the type \"{}\".",
                 type_name::<T>()
             )
-        });
-        let implementation_factory = resolvable_type
-            .downcast_ref::<Box<ImplementationFactory<T>>>()
-            .unwrap_or_else(|| {
-                panic!(
-                    "Internal error: Couldn't downcast stored implementation factory to resolved \
-                     type \"{}\".",
-                    type_name::<T>()
-                )
-            });
-        implementation_factory(self)
+        })
     }
 }
 
