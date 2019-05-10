@@ -267,8 +267,69 @@ impl Container {
                     type_name::<T>()
                 )
             });
-        let value: T = implementation_factory(self);
+        let value = implementation_factory(self);
         Some(value)
+    }
+
+    /// Retrieves the registered implementation of the specified type.
+    /// # Errors
+    /// Panics with a nice error message if the type was not registered
+    /// # Examples
+    /// Resolve a simple registered type
+    /// ```
+    /// use wonderbox::Container;
+    ///
+    /// let mut container = Container::new();
+    /// container.register(|_| "some dependency".to_string());
+    ///
+    /// let resolved = container.try_resolve::<String>();
+    /// assert!(resolved.is_some())
+    /// ```
+    ///
+    /// Resolve a trait object
+    /// ```
+    /// use wonderbox::Container;
+    ///
+    /// let mut container = Container::new();
+    ///
+    /// container.register(|_| "foo".to_string());
+    /// container.register(|container| {
+    ///     let dependency = container.try_resolve::<String>().unwrap();
+    ///     let foo = FooImpl {
+    ///         stored_string: dependency,
+    ///     };
+    ///     Box::new(foo) as Box<dyn Foo>
+    /// });
+    ///
+    /// let resolved = container.resolve::<Box<dyn Foo>>();
+    ///
+    /// trait Foo {}
+    /// struct FooImpl {
+    ///     stored_string: String,
+    /// }
+    /// impl Foo for FooImpl {}
+    /// ```
+    pub fn resolve<T>(&self) -> T
+    where
+        T: 'static,
+    {
+        let type_id = TypeId::of::<T>();
+        let resolvable_type = self.registered_types.get(&type_id).unwrap_or_else(|| {
+            panic!(
+                "Wonderbox failed to resolve the type \"{}\".",
+                type_name::<T>()
+            )
+        });
+        let implementation_factory = resolvable_type
+            .downcast_ref::<Box<ImplementationFactory<T>>>()
+            .unwrap_or_else(|| {
+                panic!(
+                    "Internal error: Couldn't downcast stored implementation factory to resolved \
+                     type \"{}\".",
+                    type_name::<T>()
+                )
+            });
+        implementation_factory(self)
     }
 }
 
