@@ -411,6 +411,16 @@ mod tests {
     }
 
     #[test]
+    #[should_panic(
+        expected = "Wonderbox failed to resolve the type \"std::boxed::Box<dyn std::ops::Fn() -> \
+                    std::boxed::Box<dyn tests::Foo>>\"."
+    )]
+    fn panics_when_unwraping_trait_object_that_is_not_registered() {
+        let container = Container::new();
+        let _resolved = container.resolve::<Box<dyn Fn() -> Box<dyn Foo>>>();
+    }
+
+    #[test]
     fn resolves_factory_of_rc_of_trait_object() {
         let mut container = Container::new();
         let factory = |_container: &Container| Rc::new(FooImpl::new()) as Rc<dyn Foo>;
