@@ -1,0 +1,5 @@
+error: Expected one constructor, found 2
+ --> $DIR/multiple_constructors.rs:8:1
+  |
+8 | impl List {
+  | ^^^^

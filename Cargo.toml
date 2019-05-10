@@ -16,6 +16,9 @@ keywords = [ "dependency", "injection", "ioc" ]
 path = "wonderbox-codegen"
 version = "0.3.0"
 
+[dev-dependencies]
+trybuild = "1.0"
+
 [workspace]
 members = [
     "wonderbox-codegen"
