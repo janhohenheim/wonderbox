@@ -8,7 +8,10 @@ struct FooImpl<T> {
 }
 
 #[autoresolvable]
-impl<T> FooImpl<T> {
+impl<T> FooImpl<T>
+where
+    T: 'static,
+{
     fn new(stored_generic: T) -> Self {
         Self { stored_generic }
     }
@@ -21,7 +24,7 @@ impl<T> Foo for FooImpl<T> {}
 fn test() {
     let mut container = Container::new();
     container.register(|_| "foo".to_string());
-    register_autoresolvable!(container, FooImpl as Box<dyn Foo>);
+    register_autoresolvable!(container, FooImpl<String> as Box<dyn Foo>);
 
     let foo = container.try_resolve::<Box<dyn Foo>>();
     assert!(foo.is_some())
