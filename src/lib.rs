@@ -341,7 +341,10 @@ impl Container {
         const AVERAGE_LENGTH_OF_TYPE_NAME: usize = 20;
 
         let initial_capacity = self.registered_types.len() * AVERAGE_LENGTH_OF_TYPE_NAME;
-        self.registered_type_names()
+        let mut registered_type_names = self.registered_type_names();
+        registered_type_names.sort();
+
+        registered_type_names
             .iter()
             .map(|type_name| format!("- {}\n", type_name))
             .fold(String::with_capacity(initial_capacity), |acc, type_name| {
@@ -449,7 +452,7 @@ mod tests {
     #[should_panic(
         expected = "Wonderbox failed to resolve the type \"std::boxed::Box<dyn \
                     tests::Bar>\".\nHelp: The following registered types were found:\n- \
-                    std::boxed::Boxed<dyn tests::Foo>\n- std::string::String\n"
+                    std::boxed::Box<dyn tests::Foo>\n- std::string::String\n"
     )]
     fn panics_when_unwraping_trait_object_that_is_not_registered_when_other_types_are_registered() {
         let mut container = Container::new();
