@@ -21,7 +21,7 @@
 - Improve documentation
 - Make `register_autoresolvable!` work with any simple wrapper around a trait object
 
-## Unreleased
+## 0.4.0
 
 - `resolve` now unwraps `T`, printing a helpful message if it fails. 
   The old behavior can still be accessed via `try_resolve`

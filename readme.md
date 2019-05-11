@@ -34,8 +34,7 @@ fn test() {
     container.register(|_| "foo".to_string());
     register_autoresolvable!(container, FooImpl as Box<dyn Foo>);
 
-    let foo = container.try_resolve::<Box<dyn Foo>>();
-    assert!(foo.is_some())
+    let foo = container.resolve::<Box<dyn Foo>>();
 }
 
 ```
