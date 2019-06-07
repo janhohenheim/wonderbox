@@ -32,7 +32,7 @@ fn test() {
     let mut container = Container::new();
     container.register(|_| "foo".to_string());
     container.register(|container| Box::new(FooImpl::new(container.resolve())) as Box<dyn Foo>);
-    
+
     let foo = container.resolve::<Box<dyn Foo>>();
 }
 
