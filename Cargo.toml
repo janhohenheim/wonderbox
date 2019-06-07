@@ -11,15 +11,3 @@ documentation = "https://docs.rs/wonderbox"
 edition = "2018"
 license = "MIT/Apache-2.0"
 keywords = [ "dependency", "injection", "ioc" ]
-
-[dependencies.wonderbox-codegen]
-path = "wonderbox-codegen"
-version = "0.4.0"
-
-[dev-dependencies]
-trybuild = "1.0"
-
-[workspace]
-members = [
-    "wonderbox-codegen"
-]
