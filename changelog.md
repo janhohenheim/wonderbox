@@ -26,3 +26,7 @@
 - `resolve` now unwraps `T`, printing a helpful message if it fails. 
   The old behavior can still be accessed via `try_resolve`
 - Add support for the registration of generics
+
+## 0.5.0
+
+- Remove autoresolution feature. For an explanation, see [#18](https://github.com/jnferner/wonderbox/issues/18).

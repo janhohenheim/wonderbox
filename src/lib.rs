@@ -2,7 +2,7 @@
 //!
 //! # Examples
 //! ```
-//! use wonderbox::{autoresolvable, register_autoresolvable, Container};
+//! use wonderbox::Container;
 //!
 //! trait Foo {}
 //!
@@ -11,7 +11,6 @@
 //!     stored_string: String,
 //! }
 //!
-//! #[autoresolvable]
 //! impl FooImpl {
 //!     fn new(stored_string: String) -> Self {
 //!         Self { stored_string }
@@ -22,7 +21,7 @@
 //!
 //! let mut container = Container::new();
 //! container.register(|_| "foo".to_string());
-//! register_autoresolvable!(container, FooImpl as Box<dyn Foo>);
+//! container.register(|container| Box::new(FooImpl::new(container.resolve())) as Box<dyn Foo>);
 //!
 //! let foo = container.try_resolve::<Box<dyn Foo>>();
 //! assert!(foo.is_some())
@@ -30,7 +29,6 @@
 //!
 //! [IoC]: https://en.wikipedia.org/wiki/Inversion_of_control
 
-#![feature(custom_attribute)]
 #![feature(core_intrinsics)]
 #![warn(missing_docs, clippy::dbg_macro, clippy::unimplemented)]
 #![deny(
@@ -44,9 +42,6 @@
     clippy::explicit_into_iter_loop
 )]
 
-pub use wonderbox_codegen::autoresolvable;
-
-use crate::internal::AutoResolvable;
 use std::any::Any;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -131,54 +126,6 @@ impl Container {
             Arc::new(partially_applied_implementation_factory),
         );
 
-        self
-    }
-
-    /// Register a type while automatically resolving its dependencies.
-    /// Only works with types which have an `#[autoresolvable] attribute on an `Impl` containing constructors.`
-    ///
-    /// For most registrations it will be easier to use the convenience macro [`register_autoresolvable!`].
-    ///
-    /// # Examples
-    /// ```
-    /// use wonderbox::{autoresolvable, register_autoresolvable, Container};
-    ///
-    /// trait Foo {}
-    ///
-    /// #[derive(Debug, Default)]
-    /// struct FooImpl {
-    ///     stored_string: String,
-    /// }
-    ///
-    /// #[autoresolvable]
-    /// impl FooImpl {
-    ///     fn new(stored_string: String) -> Self {
-    ///         Self { stored_string }
-    ///     }
-    /// }
-    ///
-    /// impl Foo for FooImpl {}
-    ///
-    /// let mut container = Container::new();
-    /// container.register(|_| "foo".to_string());
-    ///
-    /// // The following two calls are equivalent
-    /// container
-    ///     .register_autoresolvable(|foo: Option<FooImpl>| Box::new(foo.unwrap()) as Box<dyn Foo>);
-    /// register_autoresolvable!(container, FooImpl as Box<dyn Foo>);
-    ///
-    /// let foo = container.try_resolve::<Box<dyn Foo>>();
-    /// assert!(foo.is_some())
-    /// ```
-    pub fn register_autoresolvable<ResolvedType, RegisteredType>(
-        &mut self,
-        registration_fn: impl Fn(Option<ResolvedType>) -> RegisteredType + 'static + Send + Sync + Clone,
-    ) -> &mut Self
-    where
-        ResolvedType: AutoResolvable,
-        RegisteredType: 'static,
-    {
-        self.register(move |container| registration_fn(ResolvedType::try_resolve(container)));
         self
     }
 
@@ -364,61 +311,8 @@ impl Container {
     }
 }
 
-/// Primary way to register types annotated with `#[autoresolvable]`.
-/// This macro is syntax sugar over [`register_autoresolvable`]
-///
-/// # Examples
-/// ```
-/// use wonderbox::{autoresolvable, register_autoresolvable, Container};
-///
-/// trait Foo {}
-///
-/// #[derive(Debug, Default)]
-/// struct FooImpl {
-///     stored_string: String,
-/// }
-///
-/// #[autoresolvable]
-/// impl FooImpl {
-///     fn new(stored_string: String) -> Self {
-///         Self { stored_string }
-///     }
-/// }
-///
-/// impl Foo for FooImpl {}
-///
-/// let mut container = Container::new();
-/// container.register(|_| "foo".to_string());
-/// register_autoresolvable!(container, FooImpl as Box<dyn Foo>);
-///
-/// let foo = container.try_resolve::<Box<dyn Foo>>();
-/// assert!(foo.is_some())
-/// ```
-#[macro_export]
-macro_rules! register_autoresolvable {
-    ($container: ident, $implementation: ty) => {
-        $container.register_autoresolvable(|implementation: Option<$implementation>| {
-            implementation.unwrap()
-        })
-    };
-    ($container: ident, $implementation: ty as $outer_type:tt <$inner_type: ty>) => {
-        $container.register_autoresolvable(|implementation: Option<$implementation>| {
-            $outer_type::new(implementation.unwrap()) as $outer_type<$inner_type>
-        })
-    };
-}
-
 fn type_name<T>() -> &'static str {
     unsafe { std::intrinsics::type_name::<T>() }
-}
-
-#[doc(hidden)]
-pub mod internal {
-    use super::*;
-
-    pub trait AutoResolvable: Sized {
-        fn try_resolve(container: &Container) -> Option<Self>;
-    }
 }
 
 #[cfg(test)]
