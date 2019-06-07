@@ -29,7 +29,6 @@
 //!
 //! [IoC]: https://en.wikipedia.org/wiki/Inversion_of_control
 
-#![feature(custom_attribute)]
 #![feature(core_intrinsics)]
 #![warn(missing_docs, clippy::dbg_macro, clippy::unimplemented)]
 #![deny(
