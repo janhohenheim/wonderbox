@@ -10,7 +10,7 @@ A minimalistic [IoC](https://en.wikipedia.org/wiki/Inversion_of_control) library
 ## Examples
 
 ```rust
-use wonderbox::{register_autoresolvable, Container, autoresolvable};
+use wonderbox::Container;
 
 trait Foo {}
 
@@ -19,7 +19,6 @@ struct FooImpl {
     stored_string: String,
 }
 
-#[autoresolvable]
 impl FooImpl {
     fn new(stored_string: String) -> Self {
         Self { stored_string }
@@ -32,8 +31,8 @@ impl Foo for FooImpl {}
 fn test() {
     let mut container = Container::new();
     container.register(|_| "foo".to_string());
-    register_autoresolvable!(container, FooImpl as Box<dyn Foo>);
-
+    container.register(|container| Box::new(FooImpl::new(container.resolve())) as Box<dyn Foo>);
+    
     let foo = container.resolve::<Box<dyn Foo>>();
 }
 
